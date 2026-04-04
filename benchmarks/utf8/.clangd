@@ -1,0 +1,3 @@
+# SIMDe include for editors/clangd before or without compile_commands.json
+CompileFlags:
+  Add: [-I../../submodules/simde]

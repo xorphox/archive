@@ -1,0 +1,3 @@
+[submodule "submodules/simde"]
+	path = submodules/simde
+	url = https://github.com/xorphox/simde.git

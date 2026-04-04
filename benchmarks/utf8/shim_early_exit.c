@@ -1,0 +1,2 @@
+#define as_str_is_valid_utf8 bench_utf8_early_exit
+#include "validate_early_exit.c"
