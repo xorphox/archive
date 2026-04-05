@@ -43,6 +43,7 @@ utf8_fast_scalar(const uint8_t *buf, size_t buf_sz)
 	const uint64_t *p64 = (const uint64_t *)(buf + off);
 
 #if defined(UTF8_FAST_SCALAR_USE_ALIGNED)
+	extern size_t utf8_fast_bulk(const uint64_t *, size_t);
 	size_t bulk = utf8_fast_bulk(p64, n64);
 
 	if (bulk < n64 * 8) {

@@ -16,7 +16,7 @@
 
 // Scan aligned 64-bit words for any high bit.  Returns the byte offset of the
 // first non-ASCII byte relative to p64, or n64*8 if all words are ASCII.
-__attribute__((noinline, hot)) static size_t
+__attribute__((noinline, hot)) size_t
 utf8_fast_bulk(const uint64_t *p64, size_t n64)
 {
 	if (n64 == 0) {
@@ -47,12 +47,3 @@ utf8_fast_bulk(const uint64_t *p64, size_t n64)
 }
 
 #pragma GCC pop_options
-
-#define UTF8_FAST_SCALAR_USE_ALIGNED
-#include "utf8_fast_scalar.h"
-
-size_t
-utf8_fast_aligned(const uint8_t *buf, size_t buf_sz)
-{
-	return utf8_fast_scalar(buf, buf_sz);
-}

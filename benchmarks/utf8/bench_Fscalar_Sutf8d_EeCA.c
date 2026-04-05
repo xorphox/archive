@@ -1,12 +1,12 @@
-// Fast scalar ASCII prefix (utf8_fast_aligned, noinline+hot) + Höhrmann utf8d on suffix.
+// Fast scalar ASCII prefix (DSB-aligned bulk) + Höhrmann utf8d on suffix.
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
+#define UTF8_FAST_SCALAR_USE_ALIGNED
+#include "utf8_fast_scalar.h"
 #include "utf8_slow_utf8d.h"
-
-extern size_t utf8_fast_aligned(const uint8_t *buf, size_t buf_sz);
 
 bool
 as_str_is_valid_utf8(const uint8_t *buf, size_t buf_sz)
@@ -15,7 +15,7 @@ as_str_is_valid_utf8(const uint8_t *buf, size_t buf_sz)
 		return buf_sz == 0;
 	}
 
-	size_t i = utf8_fast_aligned(buf, buf_sz);
+	size_t i = utf8_fast_scalar(buf, buf_sz);
 
 	if (i == buf_sz) {
 		return true;
