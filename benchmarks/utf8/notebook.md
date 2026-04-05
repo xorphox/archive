@@ -131,9 +131,10 @@ GCC 13 at `-O3` ignores all attempts to align this particular loop:
 Trade-off: one extra function call per `utf8_fast_aligned()` invocation —
 negligible at 8 MiB.
 
-`bench_utf8_one_scalar_EeC_aligned` exercises this variant. Compare it to
-`bench_utf8_one_scalar_EeC` (fully inlined, alignment-sensitive) to measure the
-DSB effect.
+`bench_utf8_one_scalar_EeCA` and `bench_utf8_one_Fscalar_Sutf8d_EeCA` exercise
+this variant (the **A** suffix = aligned). Compare to `scalar_EeC` /
+`Fscalar_Sutf8d_EeC` (fully inlined, alignment-sensitive) to measure the DSB
+effect.
 
 ### Build-level mitigation
 
@@ -175,7 +176,7 @@ make bench UTF8_BENCH_FULL_RANGE=OFF
 ./build/bench_utf8_one_scalar_EeC --benchmark_filter='ascii_random/8388608'
 
 # Compare DSB-aligned vs default
-./build/bench_utf8_one_scalar_EeC_aligned --benchmark_filter='ascii_random/8388608'
+./build/bench_utf8_one_scalar_EeCA --benchmark_filter='ascii_random/8388608'
 
 # Re-enable monolith: make bench-build UTF8_BENCH_MONOLITH=ON
 ```

@@ -6,7 +6,6 @@
 extern "C" {
 bool bench_utf8_scalar_EeR(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_scalar_EeC(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_eec_orig(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_Forig_Sscalar_R(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_Fmemcpy_Sscalar_R(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_Fsingle_Sscalar_R(const uint8_t* buf, size_t buf_sz);
@@ -46,8 +45,6 @@ BENCH_UTF8_SUITE(Favx2_Sscalar_EeC, bench_utf8_Favx2_Sscalar_EeC);
 BENCH_UTF8_SUITE(Favx2_Slookup4_EeC, bench_utf8_Favx2_Slookup4_EeC);
 BENCH_UTF8_SUITE(Favx2_Sutf8d_EeC, bench_utf8_Favx2_Sutf8d_EeC);
 #endif
-BENCH_UTF8_SUITE(eec_orig, bench_utf8_eec_orig);
-
 } // namespace utf8_bench
 
 BENCHMARK_MAIN();

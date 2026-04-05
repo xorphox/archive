@@ -116,7 +116,6 @@ if(UTF8_BENCH_MONOLITH)
   set(UTF8_BENCH_SHIM_SRCS
     shim/shim_scalar_EeR.c
     shim/shim_scalar_EeC.c
-    shim/shim_eec_orig.c
     shim/shim_Forig_Sscalar_R.c
     shim/shim_Fmemcpy_Sscalar_R.c
     shim/shim_Fsingle_Sscalar_R.c
@@ -188,28 +187,30 @@ endfunction()
 utf8_bench_add_one(bench_utf8_one_scalar_EeC
   bench_utf8_one_scalar_EeC.cpp shim/shim_scalar_EeC.c OFF)
 
-# scalar_EeC_aligned: same algorithm, but utf8_fast_scalar is noinline+hot in
-# its own .text.hot section with -falign-functions=64 — keeps the tight 64-bit
-# ASCII loop in a single 32-byte DSB window regardless of binary layout.
-add_executable(bench_utf8_one_scalar_EeC_aligned
-  bench_utf8_one_scalar_EeC_aligned.cpp
-  shim/shim_scalar_EeC_aligned.c
-  utf8_fast_aligned.c
-)
-target_include_directories(bench_utf8_one_scalar_EeC_aligned PRIVATE
-  "${CMAKE_CURRENT_SOURCE_DIR}"
-  "${SIMDE_INCLUDE_DIR}"
-)
-target_link_libraries(bench_utf8_one_scalar_EeC_aligned PRIVATE benchmark::benchmark)
-target_compile_options(bench_utf8_one_scalar_EeC_aligned PRIVATE
-  "$<$<COMPILE_LANGUAGE:C>:${UTF8_BENCH_C_FLAGS}>"
-  $<$<COMPILE_LANGUAGE:CXX>:-O3>
-)
+# "A" (aligned) variants: utf8_fast_scalar compiled as noinline+hot in its own
+# .text.hot section with -falign-functions=64 — keeps the tight 64-bit ASCII
+# loop in a single 32-byte DSB window regardless of binary layout.
 set_source_files_properties(utf8_fast_aligned.c PROPERTIES
   COMPILE_OPTIONS "-falign-functions=64"
 )
-utf8_bench_add_one(bench_utf8_one_eec_orig
-  bench_utf8_one_eec_orig.cpp shim/shim_eec_orig.c OFF)
+
+function(utf8_bench_add_one_aligned exe cpp shim)
+  add_executable(${exe} ${cpp} ${shim} utf8_fast_aligned.c)
+  target_include_directories(${exe} PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${SIMDE_INCLUDE_DIR}"
+  )
+  target_link_libraries(${exe} PRIVATE benchmark::benchmark)
+  target_compile_options(${exe} PRIVATE
+    "$<$<COMPILE_LANGUAGE:C>:${UTF8_BENCH_C_FLAGS}>"
+    $<$<COMPILE_LANGUAGE:CXX>:-O3>
+  )
+endfunction()
+
+utf8_bench_add_one_aligned(bench_utf8_one_scalar_EeCA
+  bench_utf8_one_scalar_EeCA.cpp shim/shim_scalar_EeCA.c)
+utf8_bench_add_one_aligned(bench_utf8_one_Fscalar_Sutf8d_EeCA
+  bench_utf8_one_Fscalar_Sutf8d_EeCA.cpp shim/shim_Fscalar_Sutf8d_EeCA.c)
 utf8_bench_add_one(bench_utf8_one_Fsse2_Sscalar_EeC
   bench_utf8_one_Fsse2_Sscalar_EeC.cpp shim/shim_Fsse2_Sscalar_EeC.c OFF)
 utf8_bench_add_one(bench_utf8_one_Fscalar_Sutf8d_EeC
@@ -230,10 +231,10 @@ endif()
 
 set(UTF8_BENCH_ONE_TARGETS
   bench_utf8_one_scalar_EeC
-  bench_utf8_one_scalar_EeC_aligned
-  bench_utf8_one_eec_orig
+  bench_utf8_one_scalar_EeCA
   bench_utf8_one_Fsse2_Sscalar_EeC
   bench_utf8_one_Fscalar_Sutf8d_EeC
+  bench_utf8_one_Fscalar_Sutf8d_EeCA
   bench_utf8_one_Sscalar
 )
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")

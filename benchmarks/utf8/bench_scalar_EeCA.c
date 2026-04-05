@@ -1,4 +1,4 @@
-// bench_scalar_EeC_aligned — same as bench_scalar_EeC but uses
+// bench_scalar_EeCA — same as bench_scalar_EeC but uses
 // utf8_fast_aligned (noinline+hot) instead of inlined utf8_fast_scalar.
 
 #include <stdbool.h>
