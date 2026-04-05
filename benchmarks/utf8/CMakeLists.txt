@@ -122,7 +122,6 @@ if(UTF8_BENCH_MONOLITH)
     shim/shim_Sscalar.c
     shim/shim_Fsse2_Sscalar_EeR.c
     shim/shim_Fsse2_Sscalar_EeC.c
-    shim/shim_Fscalar_Sutf8d_EeC.c
   )
   set(UTF8_BENCH_X86_HASWELL_SHIMS
     shim/shim_scalar_EeC_haswell.c
@@ -209,8 +208,6 @@ utf8_bench_add_one_aligned(bench_utf8_one_Fscalar_Sutf8d_EeCA
   bench_utf8_one_Fscalar_Sutf8d_EeCA.cpp shim/shim_Fscalar_Sutf8d_EeCA.c)
 utf8_bench_add_one(bench_utf8_one_Fsse2_Sscalar_EeC
   bench_utf8_one_Fsse2_Sscalar_EeC.cpp shim/shim_Fsse2_Sscalar_EeC.c OFF)
-utf8_bench_add_one(bench_utf8_one_Fscalar_Sutf8d_EeC
-  bench_utf8_one_Fscalar_Sutf8d_EeC.cpp shim/shim_Fscalar_Sutf8d_EeC.c OFF)
 utf8_bench_add_one(bench_utf8_one_Sscalar
   bench_utf8_one_Sscalar.cpp shim/shim_Sscalar.c OFF)
 
@@ -229,7 +226,6 @@ set(UTF8_BENCH_ONE_TARGETS
   bench_utf8_one_scalar_EeC
   bench_utf8_one_scalar_EeCA
   bench_utf8_one_Fsse2_Sscalar_EeC
-  bench_utf8_one_Fscalar_Sutf8d_EeC
   bench_utf8_one_Fscalar_Sutf8d_EeCA
   bench_utf8_one_Sscalar
 )

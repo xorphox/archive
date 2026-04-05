@@ -12,7 +12,6 @@ bool bench_utf8_Fsingle_Sscalar_R(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_Sscalar(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_Fsse2_Sscalar_EeR(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_Fsse2_Sscalar_EeC(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_Fscalar_Sutf8d_EeC(const uint8_t* buf, size_t buf_sz);
 #if defined(__x86_64__)
 bool bench_utf8_scalar_EeC_haswell(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_Fsse41_Sscalar_EeC(const uint8_t* buf, size_t buf_sz);
@@ -31,13 +30,11 @@ namespace utf8_bench {
 //   fast_avx2_cont       → Favx2_Sscalar_EeC
 //   fast_avx2_lookup4    → Favx2_Slookup4_EeC
 //   fast_avx2_utf8d      → Favx2_Sutf8d_EeC
-//   fast_scalar_utf8d    → Fscalar_Sutf8d_EeC
 //   scalar_slow          → Sscalar
 
 BENCH_UTF8_SUITE(scalar_EeC, bench_utf8_scalar_EeC);
 // BENCH_UTF8_SUITE(scalar_EeR, bench_utf8_scalar_EeR);
 BENCH_UTF8_SUITE(Fsse2_Sscalar_EeC, bench_utf8_Fsse2_Sscalar_EeC);
-BENCH_UTF8_SUITE(Fscalar_Sutf8d_EeC, bench_utf8_Fscalar_Sutf8d_EeC);
 BENCH_UTF8_SUITE(Sscalar, bench_utf8_Sscalar);
 #if defined(__x86_64__)
 BENCH_UTF8_SUITE(Fsse41_Sscalar_EeC, bench_utf8_Fsse41_Sscalar_EeC);
