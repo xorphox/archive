@@ -1,10 +1,6 @@
-/*
- * SIMD + scalar tail find the first byte that is not plain ASCII, then run
- * scalar UTF-8 validation only on buf[i..buf_sz) — no second pass over the
- * leading ASCII run.
- *
- * Compare: validate_fast_simd_restart.c (slow path rescans from buf[0]).
- */
+// SIMD + scalar tail find the first byte that is not plain ASCII, then run scalar UTF-8
+// validation only on buf[i..buf_sz) — no second pass over the leading ASCII run.
+// Compare: bench_fast_simd_restart.c (slow path rescans from buf[0]).
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -12,14 +8,7 @@
 
 #include <simde/x86/sse2.h>
 
-#include "utf8_bench_inline.h"
 #include "utf8_slow_scalar.h"
-
-static UTF8_BENCH_NOINLINE bool
-utf8_slow_scalar_suffix(const uint8_t *buf, size_t buf_sz)
-{
-	return utf8_slow_scalar_validate(buf, buf_sz);
-}
 
 bool
 as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
@@ -35,7 +24,7 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 		simde__m128i v = simde_mm_loadu_si128(
 				(const simde__m128i*)(const void*)(buf + i));
 		simde__m128i masked = simde_mm_and_si128(v, highbit);
-		/* SSE2: any high bit set in the lane */
+		// SSE2: any high bit set in the lane
 		if (simde_mm_movemask_epi8(masked)) {
 			break;
 		}
@@ -51,5 +40,5 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 		return true;
 	}
 
-	return utf8_slow_scalar_suffix(buf + i, buf_sz - i);
+	return utf8_slow_scalar(buf + i, buf_sz - i);
 }

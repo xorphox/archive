@@ -1,8 +1,6 @@
-/*
- * Parity vs utf8_slow_scalar_validate:
- *   - utf8_slow_lookup4_validate (Lemire lookup4 scalar)
- *   - utf8_slow_utf8d_validate (Höhrmann utf8d scalar)
- */
+// Parity vs utf8_slow_scalar:
+//   - utf8_slow_lookup4 (Lemire lookup4 scalar)
+//   - utf8_slow_utf8d (Höhrmann utf8d scalar)
 #include <gtest/gtest.h>
 
 #include <cstdint>
@@ -19,21 +17,21 @@ namespace {
 bool
 Scalar(std::string_view s)
 {
-	return utf8_slow_scalar_validate(
+	return utf8_slow_scalar(
 		reinterpret_cast<const uint8_t*>(s.data()), s.size());
 }
 
 bool
 Lookup4(std::string_view s)
 {
-	return utf8_slow_lookup4_validate(
+	return utf8_slow_lookup4(
 		reinterpret_cast<const uint8_t*>(s.data()), s.size());
 }
 
 bool
 Utf8dSlow(std::string_view s)
 {
-	return utf8_slow_utf8d_validate(
+	return utf8_slow_utf8d(
 		reinterpret_cast<const uint8_t*>(s.data()), s.size());
 }
 

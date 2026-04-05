@@ -1,15 +1,12 @@
 #pragma once
 
-/*
- * Scalar transcription of Daniel Lemire’s lookup4 UTF-8 validator from
- * validateutf8-experiments (not simdjson’s tree — same math as upstream):
- *   https://github.com/lemire/validateutf8-experiments/blob/master/src/generic/utf8_lookup4_algorithm.h
- *   https://github.com/lemire/validateutf8-experiments/blob/master/src/generic/validator.h
- *
- * Three 16-byte lookup tables (high nibble of prev byte, low nibble of prev,
- * high nibble of current) + must_be_2_3_continuation + 64-byte block + EOF
- * incomplete tail, matching the reference checker.
- */
+// Scalar transcription of Daniel Lemire’s lookup4 UTF-8 validator from validateutf8-experiments
+// (not simdjson’s tree — same math as upstream):
+//   https://github.com/lemire/validateutf8-experiments/blob/master/src/generic/utf8_lookup4_algorithm.h
+//   https://github.com/lemire/validateutf8-experiments/blob/master/src/generic/validator.h
+// Three 16-byte lookup tables (high nibble of prev byte, low nibble of prev, high nibble of
+// current) + must_be_2_3_continuation + 64-byte block + EOF incomplete tail, matching the
+// reference checker.
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -18,7 +15,11 @@
 
 #include "utf8_bench_inline.h"
 
-/* Bit masks — names/comments from Lemire’s header */
+#ifndef UTF8_SLOW_LOOKUP4_INLINE
+#define UTF8_SLOW_LOOKUP4_INLINE UTF8_BENCH_HDR_INLINE
+#endif
+
+// Bit masks — names/comments from Lemire’s header
 #define L4_TOO_SHORT     (1u << 0)
 #define L4_TOO_LONG      (1u << 1)
 #define L4_OVERLONG_3    (1u << 2)
@@ -70,30 +71,30 @@ static const uint8_t lookup4_byte_2_high[16] = {
 	L4_TOO_SHORT, L4_TOO_SHORT, L4_TOO_SHORT, L4_TOO_SHORT,
 };
 
-UTF8_BENCH_INLINE uint8_t
+UTF8_SLOW_LOOKUP4_INLINE uint8_t
 lookup4_check_special_cases(uint8_t prev1, uint8_t cur)
 {
 	return (uint8_t)(lookup4_byte_1_high[prev1 >> 4] & lookup4_byte_1_low[prev1 & 0x0Fu] &
 			 lookup4_byte_2_high[cur >> 4]);
 }
 
-UTF8_BENCH_INLINE uint8_t
+UTF8_SLOW_LOOKUP4_INLINE uint8_t
 lookup4_u8_sat_sub(uint8_t a, uint8_t b)
 {
 	return a > b ? (uint8_t)(a - b) : 0;
 }
 
-UTF8_BENCH_INLINE uint8_t
+UTF8_SLOW_LOOKUP4_INLINE uint8_t
 lookup4_must_be_2_3_continuation(uint8_t prev2, uint8_t prev3)
 {
-	/* Experiments / simdjson: saturating_sub(0xe0-0x80), saturating_sub(0xf0-0x80) */
+	// Experiments / simdjson: saturating_sub(0xe0-0x80), saturating_sub(0xf0-0x80)
 	uint8_t is_third  = lookup4_u8_sat_sub(prev2, (uint8_t)(0xE0u - 0x80u));
 	uint8_t is_fourth = lookup4_u8_sat_sub(prev3, (uint8_t)(0xF0u - 0x80u));
 
 	return (uint8_t)(is_third | is_fourth);
 }
 
-UTF8_BENCH_INLINE uint8_t
+UTF8_SLOW_LOOKUP4_INLINE uint8_t
 lookup4_byte_before(const uint8_t cur[16], const uint8_t prev[16], unsigned j, unsigned k)
 {
 	if (j >= k) {
@@ -103,7 +104,7 @@ lookup4_byte_before(const uint8_t cur[16], const uint8_t prev[16], unsigned j, u
 	return prev[16u + j - k];
 }
 
-UTF8_BENCH_INLINE void
+UTF8_SLOW_LOOKUP4_INLINE void
 lookup4_check_utf8_bytes_16(const uint8_t cur[16], const uint8_t prev_in[16], int *err)
 {
 	for (unsigned j = 0; j < 16u; j++) {
@@ -121,7 +122,7 @@ lookup4_check_utf8_bytes_16(const uint8_t cur[16], const uint8_t prev_in[16], in
 	}
 }
 
-UTF8_BENCH_INLINE int
+UTF8_SLOW_LOOKUP4_INLINE int
 lookup4_is_incomplete_16(const uint8_t chunk[16])
 {
 	static const uint8_t max_array[32] = {
@@ -140,7 +141,7 @@ lookup4_is_incomplete_16(const uint8_t chunk[16])
 	return inc;
 }
 
-UTF8_BENCH_INLINE int
+UTF8_SLOW_LOOKUP4_INLINE int
 lookup4_block_all_ascii_64(const uint8_t b[64])
 {
 	for (unsigned i = 0; i < 64u; i++) {
@@ -152,7 +153,7 @@ lookup4_block_all_ascii_64(const uint8_t b[64])
 	return 1;
 }
 
-UTF8_BENCH_INLINE void
+UTF8_SLOW_LOOKUP4_INLINE void
 lookup4_check_next_input_64(const uint8_t block[64], uint8_t prev[16], int *prev_inc,
 			    int *err)
 {
@@ -173,8 +174,8 @@ lookup4_check_next_input_64(const uint8_t block[64], uint8_t prev[16], int *prev
 	memcpy(prev, block + 48, 16);
 }
 
-UTF8_BENCH_INLINE bool
-utf8_slow_lookup4_validate(const uint8_t *buf, size_t buf_sz)
+UTF8_SLOW_LOOKUP4_INLINE bool
+utf8_slow_lookup4(const uint8_t *buf, size_t buf_sz)
 {
 	uint8_t prev[16] = { 0 };
 	int	prev_inc = 0;
@@ -191,7 +192,7 @@ utf8_slow_lookup4_validate(const uint8_t *buf, size_t buf_sz)
 		i += 64;
 	}
 
-	/* validator.h: padded remainder only if length % 64 != 0 */
+	// validator.h: padded remainder only if length % 64 != 0
 	if (buf_sz > i) {
 		uint8_t tail[64] = { 0 };
 
@@ -203,7 +204,7 @@ utf8_slow_lookup4_validate(const uint8_t *buf, size_t buf_sz)
 		}
 	}
 
-	/* check_eof(): incomplete multibyte cannot end here */
+	// check_eof(): incomplete multibyte cannot end here
 	if (prev_inc) {
 		return false;
 	}

@@ -6,32 +6,32 @@
 #include <vector>
 
 extern "C" {
-bool bench_utf8_early_exit(const uint8_t* buf, size_t buf_sz);
+// Temp: trim bench driver — restore when re-enabling suites below.
+// bool bench_utf8_early_exit(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_early_exit_continue(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_orig(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_pre_memcpy(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_pre_single(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_scalar_slow(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_fast_simd_restart(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_fast_simd_continue(const uint8_t* buf, size_t buf_sz);
+// bool bench_utf8_orig(const uint8_t* buf, size_t buf_sz);
+// bool bench_utf8_pre_memcpy(const uint8_t* buf, size_t buf_sz);
+// bool bench_utf8_pre_single(const uint8_t* buf, size_t buf_sz);
+// bool bench_utf8_scalar_slow(const uint8_t* buf, size_t buf_sz);
+// bool bench_utf8_fast_simd_restart(const uint8_t* buf, size_t buf_sz);
+// bool bench_utf8_fast_simd_continue(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_fast_scalar_utf8d(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_fast_simd4_continue(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_fast_avx2_continue(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_fast_avx2_lookup4(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_fast_avx2_utf8d(const uint8_t* buf, size_t buf_sz);
+// bool bench_utf8_fast_simd4_continue(const uint8_t* buf, size_t buf_sz);
+// bool bench_utf8_fast_avx2_continue(const uint8_t* buf, size_t buf_sz);
+// bool bench_utf8_fast_avx2_lookup4(const uint8_t* buf, size_t buf_sz);
+// bool bench_utf8_fast_avx2_utf8d(const uint8_t* buf, size_t buf_sz);
 #if defined(__x86_64__)
-bool bench_utf8_early_exit_continue_haswell(const uint8_t* buf, size_t buf_sz);
+// bool bench_utf8_early_exit_continue_haswell(const uint8_t* buf, size_t buf_sz);
 #endif
 }
 
 namespace {
-#define BENCH_UTF8_FULL_RANGE
-/*
- * Input size for benchmarks (state.range(0)):
- *   Default: single 8 MiB (faster edit / measure cycles).
- *   Full sweep 8 B … 8 MiB: compile with -DBENCH_UTF8_FULL_RANGE=1 or CMake
- *   -DUTF8_BENCH_FULL_RANGE=ON.
- */
+// Temp: single 8 MiB only (re-enable for 8 B … 8 MiB sweep).
+// #define BENCH_UTF8_FULL_RANGE
+// Input size for benchmarks (state.range(0)):
+//   Default: single 8 MiB (faster edit / measure cycles).
+//   Full sweep 8 B … 8 MiB: compile with -DBENCH_UTF8_FULL_RANGE=1 or CMake
+//   -DUTF8_BENCH_FULL_RANGE=ON.
 #ifndef BENCH_UTF8_FULL_RANGE
 #define BENCH_UTF8_SIZE_SUFFIX ->Arg(8 << 20)
 #else
@@ -109,7 +109,7 @@ AppendUtf8Typical(std::vector<uint8_t>& buf, size_t target_size, std::mt19937& r
 	}
 }
 
-/* First half random ASCII, second half multibyte-heavy (AppendUtf8Typical). */
+// First half random ASCII, second half multibyte-heavy (AppendUtf8Typical).
 void
 FillHalfAsciiFirst(std::vector<uint8_t>& buf, std::mt19937& rng)
 {
@@ -124,7 +124,7 @@ FillHalfAsciiFirst(std::vector<uint8_t>& buf, std::mt19937& rng)
 	AppendUtf8Typical(buf, n, rng);
 }
 
-/* Full buffer: same multibyte-heavy mix as AppendUtf8Typical (slow path / scalar heavy). */
+// Full buffer: same multibyte-heavy mix as AppendUtf8Typical (slow path / scalar heavy).
 void
 FillUtf8Typical(std::vector<uint8_t>& buf, std::mt19937& rng)
 {
@@ -134,11 +134,9 @@ FillUtf8Typical(std::vector<uint8_t>& buf, std::mt19937& rng)
 	AppendUtf8Typical(buf, n, rng);
 }
 
-/*
- * Long runs of printable ASCII (typed text), then occasionally one emoji
- * (supplementary plane → 4-byte UTF-8). Matches “English chat + rare 😀”
- * better than sprinkling 3-byte CJK every few bytes.
- */
+// Long runs of printable ASCII (typed text), then occasionally one emoji
+// (supplementary plane → 4-byte UTF-8). Matches “English chat + rare 😀”
+// better than sprinkling 3-byte CJK every few bytes.
 void
 FillMostlyAscii(std::vector<uint8_t>& buf, std::mt19937& rng)
 {
@@ -224,23 +222,23 @@ RunBench(benchmark::State& state, ValidateFn fn, FillFn fill)
 	}																		   \
 	BENCHMARK(BM_##impl_name##_mostly_ascii) BENCH_UTF8_SIZE_SUFFIX
 
-/* BENCH_SUITE(early_exit, bench_utf8_early_exit); */
+// BENCH_SUITE(early_exit, bench_utf8_early_exit);
 BENCH_SUITE(early_exit_cont, bench_utf8_early_exit_continue);
 #if defined(__x86_64__)
-/* BENCH_SUITE(eex_cont_haswell, bench_utf8_early_exit_continue_haswell); */
+// BENCH_SUITE(eex_cont_haswell, bench_utf8_early_exit_continue_haswell);
 #endif
-/* BENCH_SUITE(orig, bench_utf8_orig); */
-/* BENCH_SUITE(pre_memcpy, bench_utf8_pre_memcpy); */
-/* BENCH_SUITE(pre_single, bench_utf8_pre_single); */
-BENCH_SUITE(scalar_slow, bench_utf8_scalar_slow);
-/* BENCH_SUITE(fast_simd_restart, bench_utf8_fast_simd_restart); */
-BENCH_SUITE(fast_simd_cont, bench_utf8_fast_simd_continue);
+// BENCH_SUITE(orig, bench_utf8_orig);
+// BENCH_SUITE(pre_memcpy, bench_utf8_pre_memcpy);
+// BENCH_SUITE(pre_single, bench_utf8_pre_single);
+// BENCH_SUITE(scalar_slow, bench_utf8_scalar_slow);
+// BENCH_SUITE(fast_simd_restart, bench_utf8_fast_simd_restart);
+// BENCH_SUITE(fast_simd_cont, bench_utf8_fast_simd_continue);
 BENCH_SUITE(fast_scalar_utf8d, bench_utf8_fast_scalar_utf8d);
 #if defined(__x86_64__)
-BENCH_SUITE(fast_simd4_cont, bench_utf8_fast_simd4_continue);
-BENCH_SUITE(fast_avx2_cont, bench_utf8_fast_avx2_continue);
-BENCH_SUITE(fast_avx2_lookup4, bench_utf8_fast_avx2_lookup4);
-BENCH_SUITE(fast_avx2_utf8d, bench_utf8_fast_avx2_utf8d);
+// BENCH_SUITE(fast_simd4_cont, bench_utf8_fast_simd4_continue);
+// BENCH_SUITE(fast_avx2_cont, bench_utf8_fast_avx2_continue);
+// BENCH_SUITE(fast_avx2_lookup4, bench_utf8_fast_avx2_lookup4);
+// BENCH_SUITE(fast_avx2_utf8d, bench_utf8_fast_avx2_utf8d);
 #endif
 } // namespace
 

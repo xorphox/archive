@@ -1,18 +1,19 @@
 #pragma once
 
-/*
- * Höhrmann utf8d DFA (scalar): 256 class bytes + 144 transition bytes.
- * http://bjoern.hoehrmann.de/utf-8/decoder/dfa/
- *
- * Copyright (c) 2008-2009 Bjoern Hoehrmann — table per terms on the page above.
- * Not the same as Lemire lookup4; kept for comparison.
- */
+// Höhrmann utf8d DFA (scalar): 256 class bytes + 144 transition bytes.
+// http://bjoern.hoehrmann.de/utf-8/decoder/dfa/
+// Copyright (c) 2008-2009 Bjoern Hoehrmann — table per terms on the page above.
+// Not the same as Lemire lookup4; kept for comparison.
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include "utf8_bench_inline.h"
+
+#ifndef UTF8_SLOW_UTF8D_INLINE
+#define UTF8_SLOW_UTF8D_INLINE UTF8_BENCH_HDR_INLINE
+#endif
 
 #define UTF8_UTF8D_ACCEPT 0u
 #define UTF8_UTF8D_REJECT 1u
@@ -34,8 +35,8 @@ static const uint8_t utf8_slow_utf8d_table[] = {
 	1,3,1,1,1,1,1,3,1,3,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 };
 
-UTF8_BENCH_INLINE bool
-utf8_slow_utf8d_validate(const uint8_t *buf, size_t buf_sz)
+UTF8_SLOW_UTF8D_INLINE bool
+utf8_slow_utf8d(const uint8_t *buf, size_t buf_sz)
 {
 	uint32_t state = UTF8_UTF8D_ACCEPT;
 

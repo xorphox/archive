@@ -1,7 +1,5 @@
-/*
- * AVX2 ASCII prefix (utf8_fast_avx2) + Lemire lookup4 scalar suffix (utf8_slow_lookup4).
- * Build this TU with -march=haswell (or equivalent) for the prefix path.
- */
+// AVX2 ASCII prefix (utf8_fast_avx2) + Lemire lookup4 scalar suffix (utf8_slow_lookup4).
+// Build this TU with -march=haswell (or equivalent) for the prefix path.
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -23,5 +21,5 @@ as_str_is_valid_utf8(const uint8_t *buf, size_t buf_sz)
 		return true;
 	}
 
-	return utf8_slow_lookup4_validate(buf + i, buf_sz - i);
+	return utf8_slow_lookup4(buf + i, buf_sz - i);
 }

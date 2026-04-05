@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(utf8_validate_bench LANGUAGES C CXX)
+project(utf8_bench LANGUAGES C CXX)
 
 # GCC or Clang only (no MSVC / other toolchains).
 if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
@@ -11,7 +11,7 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# C++ driver only; C validators follow Aerospike server (make_in/Makefile.in) style.
+# C++ driver only; C bench bodies (bench_*.c) follow server-style shims.
 set(CMAKE_CXX_STANDARD 17)
 
 include(FetchContent)
@@ -113,24 +113,24 @@ option(UTF8_BENCH_FULL_RANGE "Benchmark sizes 8 B … 8 MiB (default: 8 MiB only
 
 # bench_utf8: always these C shims (nocona / neoverse as above).
 set(UTF8_BENCH_SHIM_SRCS
-  shim_early_exit.c
-  shim_early_exit_continue.c
-  shim_orig.c
-  shim_pre_memcpy.c
-  shim_pre_single.c
-  shim_scalar_slow.c
-  shim_fast_simd_restart.c
-  shim_fast_simd_continue.c
-  shim_fast_scalar_utf8d.c
+  shim/shim_early_exit.c
+  shim/shim_early_exit_continue.c
+  shim/shim_orig.c
+  shim/shim_pre_memcpy.c
+  shim/shim_pre_single.c
+  shim/shim_scalar_slow.c
+  shim/shim_fast_simd_restart.c
+  shim/shim_fast_simd_continue.c
+  shim/shim_fast_scalar_utf8d.c
 )
 
 # x86_64 only: linked as OBJECTs — utf8_bench_x86_haswell (Haswell only, no nocona).
 set(UTF8_BENCH_X86_HASWELL_SHIMS
-  shim_early_exit_continue_haswell.c
-  shim_fast_simd4_continue.c
-  shim_fast_avx2_continue.c
-  shim_fast_avx2_lookup4.c
-  shim_fast_avx2_utf8d.c
+  shim/shim_early_exit_continue_haswell.c
+  shim/shim_fast_simd4_continue.c
+  shim/shim_fast_avx2_continue.c
+  shim/shim_fast_avx2_lookup4.c
+  shim/shim_fast_avx2_utf8d.c
 )
 
 set(UTF8_BENCH_X86_HASWELL_OBJECTS "")

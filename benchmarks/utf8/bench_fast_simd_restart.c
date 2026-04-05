@@ -1,9 +1,6 @@
-/*
- * SIMD “all ASCII?” fast path; if it fails, scalar UTF-8 validation restarts
- * from buf[0] over the *entire* buffer (ASCII prefix is visited again).
- *
- * Compare: validate_fast_simd_continue.c (slow path only on the non-ASCII suffix).
- */
+// SIMD “all ASCII?” fast path; if it fails, scalar UTF-8 validation restarts from buf[0] over
+// the *entire* buffer (ASCII prefix is visited again).
+// Compare: bench_fast_simd_continue.c (slow path only on the non-ASCII suffix).
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -26,13 +23,13 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 		simde__m128i v = simde_mm_loadu_si128(
 				(const simde__m128i*)(const void*)(buf + i));
 		if (simde_mm_movemask_epi8(v) != 0) {
-			return utf8_slow_scalar_validate(buf, buf_sz);
+			return utf8_slow_scalar(buf, buf_sz);
 		}
 	}
 
 	for (; i < buf_sz; i++) {
 		if ((buf[i] & 0x80) != 0) {
-			return utf8_slow_scalar_validate(buf, buf_sz);
+			return utf8_slow_scalar(buf, buf_sz);
 		}
 	}
 

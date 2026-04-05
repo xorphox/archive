@@ -59,5 +59,5 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 		return true;
 	}
 
-	return utf8_slow_scalar_validate(buf, buf_sz);
+	return utf8_slow_scalar(buf, buf_sz);
 }

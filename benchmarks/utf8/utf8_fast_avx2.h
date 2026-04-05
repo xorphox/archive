@@ -1,10 +1,8 @@
 #pragma once
 
-/*
- * AVX2 (SIMDe) prefix scan: end of leading ASCII (high bit clear on each byte).
- * Build TUs that include this with -march=haswell when using
- * native intrinsics; SIMDe lowers for other targets.
- */
+// AVX2 (SIMDe) prefix scan: end of leading ASCII (high bit clear on each byte).
+// Build TUs that include this with -march=haswell when using native intrinsics; SIMDe lowers
+// for other targets.
 
 #include <stddef.h>
 #include <stdint.h>
@@ -13,11 +11,13 @@
 
 #include "utf8_bench_inline.h"
 
-/*
- * Index of the first byte with bit 0x80 set, or buf_sz if all bytes are ASCII (< 0x80).
- * buf == NULL is treated like an empty prefix (returns 0).
- */
-UTF8_BENCH_INLINE size_t
+#ifndef UTF8_FAST_AVX2_INLINE
+#define UTF8_FAST_AVX2_INLINE UTF8_BENCH_HDR_INLINE
+#endif
+
+// Index of the first byte with bit 0x80 set, or buf_sz if all bytes are ASCII (< 0x80).
+// buf == NULL is treated like an empty prefix (returns 0).
+UTF8_FAST_AVX2_INLINE size_t
 utf8_fast_avx2_ascii_prefix_end(const uint8_t *buf, size_t buf_sz)
 {
 	size_t i = 0;

@@ -1,10 +1,6 @@
-/*
- * Like validate_fast_simd_continue.c, but ASCII chunk test uses SSE4.1
- * simde_mm_test_all_zeros instead of movemask_epi8.
- *
- * Build this TU with at least -msse4.1 (or a Nehalem+ -march) on x86 so the
- * native PTEST path can be used.
- */
+// Like bench_fast_simd_continue.c, but ASCII chunk test uses SSE4.1 simde_mm_test_all_zeros
+// instead of movemask_epi8. Build this TU with at least -msse4.1 (or a Nehalem+ -march) on x86
+// so the native PTEST path can be used.
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -12,14 +8,7 @@
 
 #include <simde/x86/sse4.1.h>
 
-#include "utf8_bench_inline.h"
 #include "utf8_slow_scalar.h"
-
-static UTF8_BENCH_NOINLINE bool
-utf8_slow_scalar_suffix(const uint8_t *buf, size_t buf_sz)
-{
-	return utf8_slow_scalar_validate(buf, buf_sz);
-}
 
 bool
 as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
@@ -36,7 +25,7 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 				(const simde__m128i*)(const void*)(buf + i));
 		simde__m128i masked = simde_mm_and_si128(v, highbit);
 
-		/* SSE4.1: true iff (masked & masked) is all zeros — same as movemask==0 */
+		// SSE4.1: true iff (masked & masked) is all zeros — same as movemask==0
 		if (! simde_mm_test_all_zeros(masked, masked)) {
 			break;
 		}
@@ -52,5 +41,5 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 		return true;
 	}
 
-	return utf8_slow_scalar_suffix(buf + i, buf_sz - i);
+	return utf8_slow_scalar(buf + i, buf_sz - i);
 }

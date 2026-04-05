@@ -6,12 +6,14 @@
 
 #include "utf8_bench_inline.h"
 
-/*
- * Strict UTF-8 scalar validator (multibyte + overlong + surrogates).
- * Header-only static inline so each TU can fold it into callers at -O3 if profitable.
- */
-UTF8_BENCH_INLINE bool
-utf8_slow_scalar_validate(const uint8_t *buf, size_t buf_sz)
+#ifndef UTF8_SLOW_SCALAR_INLINE
+#define UTF8_SLOW_SCALAR_INLINE UTF8_BENCH_HDR_INLINE
+#endif
+
+// Strict UTF-8 scalar validator (multibyte + overlong + surrogates).
+// Header-only static inline so each TU can fold it into callers at -O3 if profitable.
+UTF8_SLOW_SCALAR_INLINE bool
+utf8_slow_scalar(const uint8_t *buf, size_t buf_sz)
 {
 	static const uint32_t cp_min[] = { 0, 0x80, 0x800, 0x10000 };
 

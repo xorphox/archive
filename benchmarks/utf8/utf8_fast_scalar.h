@@ -1,21 +1,19 @@
 #pragma once
 
-/*
- * Scalar prefix scan: find end of leading ASCII (aligned 64-bit bulk).
- * Portable; no SIMD intrinsics required (uses __builtin_ctzll / __builtin_clzll).
- */
+// Scalar prefix scan: end of leading ASCII (aligned 64-bit bulk).
 
 #include <stddef.h>
 #include <stdint.h>
 
 #include "utf8_bench_inline.h"
 
-/*
- * Index of the first byte with high bit set, or buf_sz if all are ASCII (< 0x80).
- * buf == NULL is treated like an empty prefix (returns 0), matching utf8_fast_avx2_ascii_prefix_end.
- */
-UTF8_BENCH_INLINE size_t
-utf8_fast_scalar_ascii_prefix_end(const uint8_t *buf, size_t buf_sz)
+#ifndef UTF8_FAST_SCALAR_INLINE
+#define UTF8_FAST_SCALAR_INLINE UTF8_BENCH_HDR_INLINE
+#endif
+
+// First high-bit byte index, or buf_sz if all ASCII. buf == NULL → 0.
+UTF8_FAST_SCALAR_INLINE size_t
+utf8_fast_scalar(const uint8_t *buf, size_t buf_sz)
 {
 	size_t off = 0;
 
@@ -23,7 +21,7 @@ utf8_fast_scalar_ascii_prefix_end(const uint8_t *buf, size_t buf_sz)
 		return 0;
 	}
 
-	/* 1. HEAD: peel until 8-byte aligned */
+	// 1. HEAD: peel until 8-byte aligned
 	uintptr_t addr = (uintptr_t)(buf + off);
 	size_t head = (-addr) & 7;
 
@@ -39,7 +37,7 @@ utf8_fast_scalar_ascii_prefix_end(const uint8_t *buf, size_t buf_sz)
 
 	off += head;
 
-	/* 2. BULK: aligned 64-bit loop */
+	// 2. BULK: aligned 64-bit loop
 	size_t rem = buf_sz - off;
 	size_t n64 = rem / 8;
 	const uint64_t *p64 = (const uint64_t *)(buf + off);
@@ -63,7 +61,7 @@ utf8_fast_scalar_ascii_prefix_end(const uint8_t *buf, size_t buf_sz)
 
 	off += n64 * 8;
 
-	/* 3. TAIL: last 0–7 bytes */
+	// 3. TAIL: last 0–7 bytes
 	size_t tail = buf_sz - off;
 
 	for (size_t i = 0; i < tail; i++) {
