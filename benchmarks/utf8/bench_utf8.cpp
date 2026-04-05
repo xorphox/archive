@@ -32,7 +32,7 @@ namespace {
 #ifndef BENCH_UTF8_FULL_RANGE
 #define BENCH_UTF8_SIZE_SUFFIX ->Arg(8 << 20)
 #else
-#define BENCH_UTF8_SIZE_SUFFIX ->RangeMultiplier(2)->Range(8, 8 << 20)
+#define BENCH_UTF8_SIZE_SUFFIX ->RangeMultiplier(4)->Range(8, 8 << 20)
 #endif
 
 void
@@ -121,6 +121,16 @@ FillHalfAsciiFirst(std::vector<uint8_t>& buf, std::mt19937& rng)
 	AppendUtf8Typical(buf, n, rng);
 }
 
+/* Full buffer: same multibyte-heavy mix as AppendUtf8Typical (slow path / scalar heavy). */
+void
+FillUtf8Typical(std::vector<uint8_t>& buf, std::mt19937& rng)
+{
+	const size_t n = buf.size();
+	buf.clear();
+	buf.reserve(n);
+	AppendUtf8Typical(buf, n, rng);
+}
+
 /*
  * Long runs of printable ASCII (typed text), then occasionally one emoji
  * (supplementary plane → 4-byte UTF-8). Matches “English chat + rare 😀”
@@ -200,6 +210,11 @@ RunBench(benchmark::State& state, ValidateFn fn, FillFn fill)
 		RunBench(st, fn, FillHalfAsciiFirst);									   \
 	}																		   \
 	BENCHMARK(BM_##impl_name##_half_ascii_first) BENCH_UTF8_SIZE_SUFFIX;		   \
+	static void BM_##impl_name##_utf8_typical(benchmark::State& st)			   \
+	{																		   \
+		RunBench(st, fn, FillUtf8Typical);									   \
+	}																		   \
+	BENCHMARK(BM_##impl_name##_utf8_typical) BENCH_UTF8_SIZE_SUFFIX;			   \
 	static void BM_##impl_name##_mostly_ascii(benchmark::State& st)			   \
 	{																		   \
 		RunBench(st, fn, FillMostlyAscii);										 \
@@ -209,7 +224,7 @@ RunBench(benchmark::State& state, ValidateFn fn, FillFn fill)
 BENCH_SUITE(early_exit, bench_utf8_early_exit);
 BENCH_SUITE(early_exit_cont, bench_utf8_early_exit_continue);
 #if defined(__x86_64__) || defined(_M_X64)
-BENCH_SUITE(early_exit_cont_haswell, bench_utf8_early_exit_continue_haswell);
+BENCH_SUITE(eex_cont_haswell, bench_utf8_early_exit_continue_haswell);
 #endif
 BENCH_SUITE(orig, bench_utf8_orig);
 BENCH_SUITE(pre_memcpy, bench_utf8_pre_memcpy);

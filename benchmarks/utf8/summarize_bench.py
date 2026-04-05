@@ -8,9 +8,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-PROFILES = ("ascii_random", "half_ascii_first", "mostly_ascii")
+PROFILES = ("ascii_random", "half_ascii_first", "utf8_typical", "mostly_ascii")
 
-# Default "% faster" baseline (-march=nocona). Use --baseline early_exit_cont_haswell on x86_64
+# Default "% faster" baseline (-march=nocona). Use --baseline eex_cont_haswell on x86_64
 # for the same algorithm compiled with -march=haswell (isolates SIMD vs ISA).
 DEFAULT_BASELINE_IMPL = "early_exit_cont"
 
