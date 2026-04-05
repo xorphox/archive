@@ -1,9 +1,9 @@
 // utf8_fast_aligned — DSB-stable bulk ASCII scan.
 //
-// Splits the hot 64-bit loop out of utf8_fast_scalar into its own noinline+hot
-// function with explicit .p2align 5, so the loop always lands in a single
-// 32-byte DSB window.  The head-peel and tail remain inlined in the caller
-// (utf8_fast_scalar_aligned) — changes to them can't shift the hot loop.
+// Defines utf8_fast_bulk (noinline+hot, .p2align 5) then includes
+// utf8_fast_scalar.h with UTF8_FAST_SCALAR_USE_ALIGNED so the header
+// calls utf8_fast_bulk instead of its inline loop.  Head-peel and tail
+// come from the header — single source of truth, no duplication.
 //
 // Compare bench_utf8_one_scalar_EeCA vs bench_utf8_one_scalar_EeC
 // to measure the DSB alignment effect without changing the algorithm.
@@ -48,56 +48,11 @@ utf8_fast_bulk(const uint64_t *p64, size_t n64)
 
 #pragma GCC pop_options
 
-#include "utf8_bench_inline.h"
-
-// Full fast-path: head peel + aligned bulk + tail.  Inlined into the caller.
-static inline size_t
-utf8_fast_scalar_aligned(const uint8_t *buf, size_t buf_sz)
-{
-	size_t off = 0;
-
-	if (buf == NULL) {
-		return 0;
-	}
-
-	uintptr_t addr = (uintptr_t)(buf + off);
-	size_t head = (-addr) & 7;
-
-	if (head > buf_sz) {
-		head = buf_sz;
-	}
-
-	for (size_t i = 0; i < head; i++) {
-		if ((buf[off + i] & 0x80) != 0) {
-			return off + i;
-		}
-	}
-
-	off += head;
-
-	size_t rem = buf_sz - off;
-	size_t n64 = rem / 8;
-	size_t bulk = utf8_fast_bulk((const uint64_t *)(buf + off), n64);
-
-	if (bulk < n64 * 8) {
-		return off + bulk;
-	}
-
-	off += n64 * 8;
-
-	size_t tail = buf_sz - off;
-
-	for (size_t i = 0; i < tail; i++) {
-		if ((buf[off + i] & 0x80) != 0) {
-			return off + i;
-		}
-	}
-
-	return buf_sz;
-}
+#define UTF8_FAST_SCALAR_USE_ALIGNED
+#include "utf8_fast_scalar.h"
 
 size_t
 utf8_fast_aligned(const uint8_t *buf, size_t buf_sz)
 {
-	return utf8_fast_scalar_aligned(buf, buf_sz);
+	return utf8_fast_scalar(buf, buf_sz);
 }

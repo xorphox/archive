@@ -42,6 +42,13 @@ utf8_fast_scalar(const uint8_t *buf, size_t buf_sz)
 	size_t n64 = rem / 8;
 	const uint64_t *p64 = (const uint64_t *)(buf + off);
 
+#if defined(UTF8_FAST_SCALAR_USE_ALIGNED)
+	size_t bulk = utf8_fast_bulk(p64, n64);
+
+	if (bulk < n64 * 8) {
+		return off + bulk;
+	}
+#else
 	for (size_t i = 0; i < n64; i++) {
 		const uint64_t w = p64[i];
 		const uint64_t t = w & 0x8080808080808080ULL;
@@ -58,6 +65,7 @@ utf8_fast_scalar(const uint8_t *buf, size_t buf_sz)
 			return base + (size_t)j;
 		}
 	}
+#endif
 
 	off += n64 * 8;
 
