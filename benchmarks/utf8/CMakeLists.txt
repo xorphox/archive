@@ -16,6 +16,33 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googlebenchmark)
 
+option(UTF8_BUILD_TESTS "Build GTest: utf8_validate_lookup4_slow vs utf8_validate_scalar_slow" ON)
+
+if(UTF8_BUILD_TESTS)
+  set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG v1.15.2
+  )
+  FetchContent_MakeAvailable(googletest)
+  enable_testing()
+
+  add_executable(utf8_lookup4_slow_test test/utf8_lookup4_slow_test.cc)
+  target_include_directories(utf8_lookup4_slow_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(utf8_lookup4_slow_test PRIVATE GTest::gtest_main)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(utf8_lookup4_slow_test PRIVATE -Wall)
+  endif()
+
+  include(GoogleTest)
+  # ctest is not a TTY; without this GTest disables ANSI colors (auto mode).
+  gtest_discover_tests(utf8_lookup4_slow_test
+    PROPERTIES
+      ENVIRONMENT "GTEST_COLOR=yes"
+  )
+endif()
+
 # SIMDe: #include <simde/x86/sse2.h> (headers live under submodules/simde/simde/)
 set(ARCHIVE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../..")
 set(SIMDE_INCLUDE_DIR "${ARCHIVE_ROOT}/submodules/simde")

@@ -1,6 +1,7 @@
 # UTF-8 validator benchmark (Google Benchmark via CMake).
-#   make              — build, run full benchmark suite, print tables (+ chart if matplotlib)
-#   make bench-build  — configure and compile only (no benchmark run)
+#   make              — configure/build (no GTest), run benchmark + summarize (+ chart if matplotlib)
+#   make test         — configure with GTest, build utf8_lookup4_slow_test, run ctest
+#   make bench-build  — configure/build only (no benchmark run)
 #   make bench-run    — run benchmark binary with BENCH_ARGS (ulimit stack); no summary
 #   make clean        — remove build tree and generated bench outputs
 #
@@ -24,14 +25,17 @@ SUMMARIZE := $(UTF8_BENCH_DIR)/summarize_bench.py
 STACK_KB ?= 8192
 BENCH_FLAGS ?=
 UTF8_BENCH_FULL_RANGE ?= OFF
+# Bench-only builds skip FetchContent googletest unless you run `make test`.
+UTF8_BUILD_TESTS ?= OFF
 
-.PHONY: all bench bench-build bench-run clean
+.PHONY: all bench bench-build bench-run test test-build utf8-test clean
 
 all: bench
 
 bench-build:
 	$(CMAKE) -S $(UTF8_BENCH_DIR) -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
-		-DUTF8_BENCH_FULL_RANGE=$(UTF8_BENCH_FULL_RANGE)
+		-DUTF8_BENCH_FULL_RANGE=$(UTF8_BENCH_FULL_RANGE) \
+		-DUTF8_BUILD_TESTS=$(UTF8_BUILD_TESTS)
 	ln -sf build/compile_commands.json $(UTF8_BENCH_DIR)/compile_commands.json
 	$(CMAKE) --build $(BUILD_DIR) -j$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 	@echo "Built $(BENCH_BIN)"
@@ -44,6 +48,19 @@ bench: bench-build
 
 bench-run: bench-build
 	ulimit -S -s $(STACK_KB) && "$(CURDIR)/$(BENCH_BIN)" $(BENCH_ARGS)
+
+test-build:
+	$(CMAKE) -S $(UTF8_BENCH_DIR) -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
+		-DUTF8_BENCH_FULL_RANGE=$(UTF8_BENCH_FULL_RANGE) \
+		-DUTF8_BUILD_TESTS=ON
+	ln -sf build/compile_commands.json $(UTF8_BENCH_DIR)/compile_commands.json
+	$(CMAKE) --build $(BUILD_DIR) -j$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) \
+		--target utf8_lookup4_slow_test
+
+test: test-build
+	cd $(BUILD_DIR) && GTEST_COLOR=yes ctest -R 'Utf8(Lookup4|Utf8d)VsScalar' --output-on-failure
+
+utf8-test: test
 
 clean:
 	rm -f $(UTF8_BENCH_DIR)/compile_commands.json

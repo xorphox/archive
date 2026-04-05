@@ -1,5 +1,4 @@
-#ifndef UTF8_SCALAR_SLOW_H
-#define UTF8_SCALAR_SLOW_H
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -63,5 +62,3 @@ utf8_validate_scalar_slow(const uint8_t* buf, size_t buf_sz)
 
 	return true;
 }
-
-#endif

@@ -221,16 +221,16 @@ RunBench(benchmark::State& state, ValidateFn fn, FillFn fill)
 	}																		   \
 	BENCHMARK(BM_##impl_name##_mostly_ascii) BENCH_UTF8_SIZE_SUFFIX
 
-BENCH_SUITE(early_exit, bench_utf8_early_exit);
+/* BENCH_SUITE(early_exit, bench_utf8_early_exit); */
 BENCH_SUITE(early_exit_cont, bench_utf8_early_exit_continue);
 #if defined(__x86_64__) || defined(_M_X64)
-BENCH_SUITE(eex_cont_haswell, bench_utf8_early_exit_continue_haswell);
+/* BENCH_SUITE(eex_cont_haswell, bench_utf8_early_exit_continue_haswell); */
 #endif
-BENCH_SUITE(orig, bench_utf8_orig);
-BENCH_SUITE(pre_memcpy, bench_utf8_pre_memcpy);
-BENCH_SUITE(pre_single, bench_utf8_pre_single);
+/* BENCH_SUITE(orig, bench_utf8_orig); */
+/* BENCH_SUITE(pre_memcpy, bench_utf8_pre_memcpy); */
+/* BENCH_SUITE(pre_single, bench_utf8_pre_single); */
 BENCH_SUITE(scalar_slow, bench_utf8_scalar_slow);
-BENCH_SUITE(fast_simd_restart, bench_utf8_fast_simd_restart);
+/* BENCH_SUITE(fast_simd_restart, bench_utf8_fast_simd_restart); */
 BENCH_SUITE(fast_simd_cont, bench_utf8_fast_simd_continue);
 #if defined(__x86_64__) || defined(_M_X64)
 BENCH_SUITE(fast_simd4_cont, bench_utf8_fast_simd4_continue);
