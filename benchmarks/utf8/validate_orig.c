@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stddef.h>
 
-#include "utf8_scalar_slow.h"
+#include "utf8_slow_scalar.h"
 
 UTF8_BENCH_INLINE uint64_t
 accumulate64(const uint8_t* buf, size_t buf_sz)
@@ -55,5 +55,5 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 		return true;
 	}
 
-	return utf8_validate_scalar_slow(buf, buf_sz);
+	return utf8_slow_scalar_validate(buf, buf_sz);
 }

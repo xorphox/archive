@@ -12,7 +12,7 @@
 
 #include <simde/x86/sse4.1.h>
 
-#include "utf8_scalar_slow.h"
+#include "utf8_slow_scalar.h"
 
 bool
 as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
@@ -45,5 +45,5 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 		return true;
 	}
 
-	return utf8_validate_scalar_slow(buf + i, buf_sz - i);
+	return utf8_slow_scalar_validate(buf + i, buf_sz - i);
 }

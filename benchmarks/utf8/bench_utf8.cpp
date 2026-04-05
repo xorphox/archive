@@ -16,6 +16,7 @@ bool bench_utf8_fast_simd_restart(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_fast_simd_continue(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_fast_simd4_continue(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_fast_avx2_continue(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_fast_avx2_lookup4(const uint8_t* buf, size_t buf_sz);
 #if defined(__x86_64__) || defined(_M_X64)
 bool bench_utf8_early_exit_continue_haswell(const uint8_t* buf, size_t buf_sz);
 #endif
@@ -235,6 +236,7 @@ BENCH_SUITE(fast_simd_cont, bench_utf8_fast_simd_continue);
 #if defined(__x86_64__) || defined(_M_X64)
 BENCH_SUITE(fast_simd4_cont, bench_utf8_fast_simd4_continue);
 BENCH_SUITE(fast_avx2_cont, bench_utf8_fast_avx2_continue);
+BENCH_SUITE(fast_avx2_lookup4, bench_utf8_fast_avx2_lookup4);
 #endif
 } // namespace
 

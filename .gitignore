@@ -1,3 +1,4 @@
 benchmarks/utf8/build/
 benchmarks/utf8/compile_commands.json
 benchmarks/utf8/.cache/
+**/__pycache__/

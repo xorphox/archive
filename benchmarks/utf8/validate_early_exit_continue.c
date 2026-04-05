@@ -1,7 +1,7 @@
 /*
  * Same 64-bit aligned ASCII scan as validate_early_exit.c, but the scalar
  * UTF-8 validator runs only on the suffix starting at the first byte with
- * bit 7 set (shared utf8_validate_scalar_slow).
+ * bit 7 set (shared utf8_slow_scalar_validate).
  *
  * Compare: validate_early_exit.c (slow path rescans from buf[0]).
  */
@@ -10,7 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "utf8_scalar_slow.h"
+#include "utf8_slow_scalar.h"
 
 /* Smallest i such that buf[i] has high bit set, or buf_sz if all ASCII. */
 UTF8_BENCH_INLINE size_t
@@ -85,5 +85,5 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 		return true;
 	}
 
-	return utf8_validate_scalar_slow(buf + k, buf_sz - k);
+	return utf8_slow_scalar_validate(buf + k, buf_sz - k);
 }

@@ -174,7 +174,7 @@ lookup4_check_next_input_64(const uint8_t block[64], uint8_t prev[16], int *prev
 }
 
 UTF8_BENCH_INLINE bool
-utf8_validate_lookup4_slow(const uint8_t *buf, size_t buf_sz)
+utf8_slow_lookup4_validate(const uint8_t *buf, size_t buf_sz)
 {
 	uint8_t prev[16] = { 0 };
 	int	prev_inc = 0;

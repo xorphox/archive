@@ -5,7 +5,7 @@
  * http://bjoern.hoehrmann.de/utf-8/decoder/dfa/
  *
  * Copyright (c) 2008-2009 Bjoern Hoehrmann — table per terms on the page above.
- * Not the same as simdjson/Lemire lookup4; kept here for comparison.
+ * Not the same as Lemire lookup4; kept for comparison.
  */
 
 #include <stdbool.h>
@@ -17,7 +17,7 @@
 #define UTF8_UTF8D_ACCEPT 0u
 #define UTF8_UTF8D_REJECT 1u
 
-static const uint8_t utf8_validate_utf8d_slow_table[] = {
+static const uint8_t utf8_slow_utf8d_table[] = {
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -35,14 +35,14 @@ static const uint8_t utf8_validate_utf8d_slow_table[] = {
 };
 
 UTF8_BENCH_INLINE bool
-utf8_validate_utf8d_slow(const uint8_t *buf, size_t buf_sz)
+utf8_slow_utf8d_validate(const uint8_t *buf, size_t buf_sz)
 {
 	uint32_t state = UTF8_UTF8D_ACCEPT;
 
 	for (size_t i = 0; i < buf_sz; i++) {
-		uint32_t type = utf8_validate_utf8d_slow_table[buf[i]];
+		uint32_t type = utf8_slow_utf8d_table[buf[i]];
 
-		state = utf8_validate_utf8d_slow_table[256 + state * 16 + type];
+		state = utf8_slow_utf8d_table[256 + state * 16 + type];
 		if (state == UTF8_UTF8D_REJECT) {
 			return false;
 		}

@@ -11,7 +11,7 @@
 
 #include <simde/x86/sse2.h>
 
-#include "utf8_scalar_slow.h"
+#include "utf8_slow_scalar.h"
 
 bool
 as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
@@ -26,13 +26,13 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 		simde__m128i v = simde_mm_loadu_si128(
 				(const simde__m128i*)(const void*)(buf + i));
 		if (simde_mm_movemask_epi8(v) != 0) {
-			return utf8_validate_scalar_slow(buf, buf_sz);
+			return utf8_slow_scalar_validate(buf, buf_sz);
 		}
 	}
 
 	for (; i < buf_sz; i++) {
 		if ((buf[i] & 0x80) != 0) {
-			return utf8_validate_scalar_slow(buf, buf_sz);
+			return utf8_slow_scalar_validate(buf, buf_sz);
 		}
 	}
 

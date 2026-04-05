@@ -1,7 +1,7 @@
 /*
- * Parity vs utf8_validate_scalar_slow:
- *   - utf8_validate_lookup4_slow (custom DFA; may diverge until fixed)
- *   - utf8_validate_utf8d_slow (Höhrmann utf8d scalar)
+ * Parity vs utf8_slow_scalar_validate:
+ *   - utf8_slow_lookup4_validate (Lemire lookup4 scalar)
+ *   - utf8_slow_utf8d_validate (Höhrmann utf8d scalar)
  */
 #include <gtest/gtest.h>
 
@@ -10,30 +10,30 @@
 #include <string_view>
 #include <vector>
 
-#include "utf8_scalar_slow.h"
-#include "utf8_validate_lookup4_slow.h"
-#include "utf8_validate_utf8d_slow.h"
+#include "utf8_slow_lookup4.h"
+#include "utf8_slow_scalar.h"
+#include "utf8_slow_utf8d.h"
 
 namespace {
 
 bool
 Scalar(std::string_view s)
 {
-	return utf8_validate_scalar_slow(
+	return utf8_slow_scalar_validate(
 		reinterpret_cast<const uint8_t*>(s.data()), s.size());
 }
 
 bool
 Lookup4(std::string_view s)
 {
-	return utf8_validate_lookup4_slow(
+	return utf8_slow_lookup4_validate(
 		reinterpret_cast<const uint8_t*>(s.data()), s.size());
 }
 
 bool
 Utf8dSlow(std::string_view s)
 {
-	return utf8_validate_utf8d_slow(
+	return utf8_slow_utf8d_validate(
 		reinterpret_cast<const uint8_t*>(s.data()), s.size());
 }
 

@@ -11,7 +11,7 @@
  * Header-only static inline so each TU can fold it into callers at -O3 if profitable.
  */
 UTF8_BENCH_INLINE bool
-utf8_validate_scalar_slow(const uint8_t* buf, size_t buf_sz)
+utf8_slow_scalar_validate(const uint8_t *buf, size_t buf_sz)
 {
 	static const uint32_t cp_min[] = { 0, 0x80, 0x800, 0x10000 };
 
