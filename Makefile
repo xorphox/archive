@@ -12,9 +12,12 @@
 # Graph: install matplotlib — Debian/Ubuntu: sudo apt install python3-matplotlib
 #        or: pip install matplotlib
 #
-# Optional: BENCH_FLAGS='--benchmark_filter=...'  (passed to bench_utf8 before --benchmark_out)
+# Optional: BENCH_FLAGS='--benchmark_filter=...'  (each binary: before --benchmark_out)
 #           BENCH_FLAGS='--benchmark_min_time=0.1' for quicker (less accurate) runs
-#           UTF8_BENCH_FULL_RANGE=ON  — reconfigure to sweep 8 B … 8 MiB (default: 8 MiB only)
+#           SUMMARIZE_FLAGS='--metric real' — tables match GB wall Time column (default: cpu_time / CPU column)
+#           UTF8_BENCH_FULL_RANGE=OFF — run only 8 B + 8 MiB (runtime filter; binary is identical).
+#             Default ON runs the full 8 B … 8 MiB sweep (12 sizes).
+#           UTF8_BENCH_MONOLITH=ON  — single $(BENCH_BIN); default OFF runs bench_utf8_one_* and merges JSON.
 
 SHELL := /bin/bash
 
@@ -28,12 +31,30 @@ BENCH_BIN := $(BUILD_DIR)/bench_utf8
 BENCH_JSON := $(BUILD_DIR)/bench_results.json
 BENCH_PNG := $(BUILD_DIR)/bench_chart.png
 SUMMARIZE := $(UTF8_BENCH_DIR)/summarize_bench.py
+MERGE_JSON := $(UTF8_BENCH_DIR)/merge_benchmark_json.py
 # Thread/main stack soft limit for benchmark runs (KB). 8192 = 8 MiB.
 STACK_KB ?= 8192
 BENCH_FLAGS ?=
-UTF8_BENCH_FULL_RANGE ?= OFF
+SUMMARIZE_FLAGS ?=
+# Full size sweep by default; OFF restricts to 8 B + 8 MiB via --benchmark_filter (same binary).
+UTF8_BENCH_FULL_RANGE ?= ON
+# Monolithic bench_utf8 (CMake default OFF). This Makefile defaults OFF: build bench_utf8_one_all only.
+UTF8_BENCH_MONOLITH ?= OFF
+
+# Runtime size filter (appended to BENCH_FLAGS when FULL_RANGE=OFF).
+ifneq ($(UTF8_BENCH_FULL_RANGE),ON)
+BENCH_SIZE_FILTER := --benchmark_filter='.*/8$$|.*/8388608$$'
+else
+BENCH_SIZE_FILTER :=
+endif
 # Bench-only builds skip FetchContent googletest unless you run `make test`.
 UTF8_BUILD_TESTS ?= OFF
+
+ifeq ($(UTF8_BENCH_MONOLITH),ON)
+BENCH_BUILD_TARGET := bench_utf8
+else
+BENCH_BUILD_TARGET := bench_utf8_one_all
+endif
 
 .PHONY: all bench bench-build bench-run test test-build utf8-test clean
 
@@ -44,30 +65,61 @@ bench-build:
 	bash -o pipefail -c '\
 		{ echo "==== $$(date -Iseconds) bench-build: configure ===="; \
 		  $(CMAKE) -S $(UTF8_BENCH_DIR) -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
-			-DUTF8_BENCH_FULL_RANGE=$(UTF8_BENCH_FULL_RANGE) \
+			-DUTF8_BENCH_MONOLITH=$(UTF8_BENCH_MONOLITH) \
 			-DUTF8_BUILD_TESTS=$(UTF8_BUILD_TESTS); \
 		  ln -sf build/compile_commands.json $(UTF8_BENCH_DIR)/compile_commands.json; \
 		  echo "==== bench-build: cmake --build --verbose ===="; \
 		  $(CMAKE) --build $(BUILD_DIR) \
-			-j$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) --verbose; \
+			-j$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) --verbose \
+			--target $(BENCH_BUILD_TARGET); \
 		} 2>&1 | tee $(MAKE_LOG)'
+ifeq ($(UTF8_BENCH_MONOLITH),ON)
 	@echo "Built $(BENCH_BIN) (build log: $(MAKE_LOG))"
+else
+	@echo "Built $(BUILD_DIR)/bench_utf8_one_* (build log: $(MAKE_LOG))"
+endif
 
 bench: bench-build
-	ulimit -S -s $(STACK_KB) && "$(CURDIR)/$(BENCH_BIN)" $(BENCH_FLAGS) \
+ifeq ($(UTF8_BENCH_MONOLITH),ON)
+	ulimit -S -s $(STACK_KB) && "$(CURDIR)/$(BENCH_BIN)" $(BENCH_SIZE_FILTER) $(BENCH_FLAGS) \
 		--benchmark_out="$(CURDIR)/$(BENCH_JSON)" \
 		--benchmark_out_format=json
-	$(PYTHON) "$(CURDIR)/$(SUMMARIZE)" "$(CURDIR)/$(BENCH_JSON)" --png "$(CURDIR)/$(BENCH_PNG)"
+else
+	bash -o pipefail -c '\
+		set -euo pipefail; \
+		ulimit -S -s $(STACK_KB); \
+		PARTS="$(CURDIR)/$(BUILD_DIR)/.bench_parts"; \
+		rm -rf "$$PARTS" && mkdir -p "$$PARTS"; \
+		shopt -s nullglob; \
+		for bin in "$(CURDIR)/$(BUILD_DIR)"/bench_utf8_one_*; do \
+		  base=$$(basename "$$bin"); \
+		  "$$bin" $(BENCH_SIZE_FILTER) $(BENCH_FLAGS) \
+		    --benchmark_out="$$PARTS/$$base.json" \
+		    --benchmark_out_format=json; \
+		done; \
+		$(PYTHON) "$(CURDIR)/$(MERGE_JSON)" "$$PARTS" > "$(CURDIR)/$(BENCH_JSON)"'
+endif
+	$(PYTHON) "$(CURDIR)/$(SUMMARIZE)" $(SUMMARIZE_FLAGS) "$(CURDIR)/$(BENCH_JSON)" --png "$(CURDIR)/$(BENCH_PNG)"
 
 bench-run: bench-build
+ifeq ($(UTF8_BENCH_MONOLITH),ON)
 	ulimit -S -s $(STACK_KB) && "$(CURDIR)/$(BENCH_BIN)" $(BENCH_ARGS)
+else
+	bash -o pipefail -c '\
+		set -euo pipefail; \
+		ulimit -S -s $(STACK_KB); \
+		shopt -s nullglob; \
+		for bin in "$(CURDIR)/$(BUILD_DIR)"/bench_utf8_one_*; do \
+		  echo "=== $$bin ==="; \
+		  "$$bin" $(BENCH_ARGS); \
+		done'
+endif
 
 test-build:
 	@mkdir -p $(BUILD_DIR)
 	bash -o pipefail -c '\
 		{ echo "==== $$(date -Iseconds) test-build: configure ===="; \
 		  $(CMAKE) -S $(UTF8_BENCH_DIR) -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
-			-DUTF8_BENCH_FULL_RANGE=$(UTF8_BENCH_FULL_RANGE) \
 			-DUTF8_BUILD_TESTS=ON; \
 		  ln -sf build/compile_commands.json $(UTF8_BENCH_DIR)/compile_commands.json; \
 		  echo "==== test-build: cmake --build --verbose ===="; \

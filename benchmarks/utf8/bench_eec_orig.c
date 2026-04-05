@@ -11,7 +11,7 @@
 #define UTF8_BENCH_USE_ALWAYS_INLINE
 #include "utf8_slow_scalar.h"
 
-static inline size_t
+static inline size_t __attribute__((always_inline))
 eec_orig_prefix(const uint8_t *buf, size_t buf_sz)
 {
 	size_t off = 0;

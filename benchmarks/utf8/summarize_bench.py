@@ -42,7 +42,9 @@ def human_bytes(n: int) -> str:
     return str(n)
 
 
-def load_rows(path: Path) -> Dict[Tuple[str, str, int], float]:
+def load_rows(path: Path, metric: str = "cpu") -> Dict[Tuple[str, str, int], float]:
+    """metric: 'cpu' → JSON cpu_time; 'real' → JSON real_time (console \"Time\" column)."""
+    key = "cpu_time" if metric == "cpu" else "real_time"
     data = json.loads(path.read_text(encoding="utf-8"))
     out: Dict[Tuple[str, str, int], float] = {}
     for b in data.get("benchmarks", []):
@@ -53,15 +55,18 @@ def load_rows(path: Path) -> Dict[Tuple[str, str, int], float]:
         if not parsed:
             continue
         impl, profile, size = parsed
-        cpu_ns = float(b["cpu_time"])
-        out[(impl, profile, size)] = cpu_ns
+        out[(impl, profile, size)] = float(b[key])
     return out
 
 
 def print_table(
-    profile: str, sizes: list, impls: list, grid: Dict[str, Dict[int, float]]
+    profile: str,
+    sizes: list,
+    impls: list,
+    grid: Dict[str, Dict[int, float]],
+    metric_label: str,
 ) -> None:
-    title = f"{profile} — cpu_time (ns) vs input size"
+    title = f"{profile} — {metric_label} (ns) vs input size"
     print()
     print(title)
     print("=" * len(title))
@@ -95,7 +100,7 @@ def print_delta_table(
     grid: Dict[str, Dict[int, float]],
     baseline_impl: str,
 ) -> None:
-    """Print % faster than baseline (positive = lower cpu_time than baseline)."""
+    """Print % faster than baseline (positive = lower time than baseline)."""
     base_grid = grid.get(baseline_impl)
     if not base_grid:
         print()
@@ -136,6 +141,7 @@ def try_plot(
     sizes: list[int],
     impls: list[str],
     data: dict[tuple[str, str, int], float],
+    metric_label: str,
 ) -> bool:
     try:
         import matplotlib.pyplot as plt
@@ -157,7 +163,7 @@ def try_plot(
         ax.set_xscale("log", base=2)
         ax.set_yscale("log")
         ax.set_xlabel("input size (bytes)")
-        ax.set_ylabel("cpu_time (ns)")
+        ax.set_ylabel(f"{metric_label} (ns)")
         ax.set_title(profile.replace("_", " "))
         ax.grid(True, which="both", linestyle=":", alpha=0.6)
         ax.legend(fontsize=7, loc="upper left")
@@ -189,16 +195,31 @@ def main() -> int:
         action="store_true",
         help="Do not print %% faster vs baseline table",
     )
+    ap.add_argument(
+        "--metric",
+        choices=("cpu", "real"),
+        default="cpu",
+        help="JSON field to tabulate: cpu=cpu_time (GB console 'CPU' column); "
+        "real=real_time (often the first 'Time' column). Default: cpu.",
+    )
     args = ap.parse_args()
 
     if not args.json_path.is_file():
         print(f"error: missing {args.json_path}", file=sys.stderr)
         return 1
 
-    data = load_rows(args.json_path)
+    data = load_rows(args.json_path, metric=args.metric)
     if not data:
         print("error: no iteration benchmarks parsed from JSON", file=sys.stderr)
         return 1
+
+    metric_label = "cpu_time" if args.metric == "cpu" else "real_time"
+    print(
+        f"# Tables/chart: mean {metric_label}/iter (ns). "
+        "Match Google Benchmark’s CPU column when using default --metric cpu, or the wall "
+        "Time column with --metric real (they often differ slightly).",
+        flush=True,
+    )
 
     impls = sorted({k[0] for k in data})
     sizes = sorted({k[2] for k in data})
@@ -208,7 +229,7 @@ def main() -> int:
         for (impl, prof, sz), cpu_ns in data.items():
             if prof == profile:
                 grid[impl][sz] = cpu_ns
-        print_table(profile, sizes, impls, grid)
+        print_table(profile, sizes, impls, grid, metric_label)
         if not args.no_delta:
             print_delta_table(profile, sizes, impls, grid, args.baseline)
 
@@ -220,7 +241,7 @@ def main() -> int:
     print("—" * 60)
     if args.no_plot:
         print("Chart skipped (--no-plot).")
-    elif try_plot(png_path, list(PROFILES), sizes, impls, data):
+    elif try_plot(png_path, list(PROFILES), sizes, impls, data, metric_label):
         print(f"Chart written: {png_path}")
     else:
         print("Chart skipped (matplotlib not installed).")
