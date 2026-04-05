@@ -115,20 +115,26 @@ GCC 13 at `-O3` ignores all attempts to align this particular loop:
 - `-falign-functions=64` — aligns the function start, but the loop is at
   offset +0xb1, which crosses a 32-byte boundary at any 64-byte-aligned base.
 
-### What works: `noinline` + `hot` + `-falign-functions=64`
+### What works: split the bulk loop into its own function
 
-`utf8_fast_aligned.c` wraps `utf8_fast_scalar` in a standalone function with
-`__attribute__((noinline, hot))`. This:
+`utf8_fast_aligned.c` splits the 64-bit bulk loop out of `utf8_fast_scalar`
+into a standalone `static` function (`utf8_fast_bulk`) with
+`__attribute__((noinline, hot))`. The head-peel and tail remain inlined in
+the caller. The bulk function uses three mechanisms:
 
-1. **Isolates** `utf8_fast_scalar` into `.text.hot` — its own linker section,
-   decoupled from the C++ harness code that shifts around.
-2. **`-falign-functions=64`** on that file ensures the function always starts at
-   a 64-byte boundary.
-3. The loop lands at offset +0xad (17 bytes, fits within a 32-byte window at
-   positions 13–30). Because the function base is 64-byte-aligned (a multiple
-   of 32), the loop is always in one DSB window.
+1. **`__attribute__((hot))`** — places it in `.text.hot`, decoupled from the
+   C++ harness code.
+2. **`#pragma GCC optimize("align-functions=64")`** — function starts at a
+   64-byte boundary.
+3. **`asm volatile(".p2align 5")`** inside the function, right before the loop
+   — GCC inserts NOP padding to a 32-byte boundary.  The loop always starts at
+   offset 14 within a 32-byte DSB window (14 + 17 = 31 ≤ 32).
 
-Trade-off: one extra function call per `utf8_fast_aligned()` invocation —
+This is **robust**: changes to code before the `.p2align` only change the NOP
+count. Changes to head-peel, tail, or caller code can't affect the bulk function
+at all.
+
+Trade-off: one extra function call into `utf8_fast_bulk` per validation —
 negligible at 8 MiB.
 
 `bench_utf8_one_scalar_EeCA` and `bench_utf8_one_Fscalar_Sutf8d_EeCA` exercise
