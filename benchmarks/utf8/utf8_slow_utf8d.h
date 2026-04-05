@@ -43,6 +43,7 @@ utf8_slow_utf8d_validate(const uint8_t *buf, size_t buf_sz)
 		uint32_t type = utf8_slow_utf8d_table[buf[i]];
 
 		state = utf8_slow_utf8d_table[256 + state * 16 + type];
+
 		if (state == UTF8_UTF8D_REJECT) {
 			return false;
 		}

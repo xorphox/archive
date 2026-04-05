@@ -14,10 +14,12 @@ bool bench_utf8_pre_single(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_scalar_slow(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_fast_simd_restart(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_fast_simd_continue(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_fast_scalar_utf8d(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_fast_simd4_continue(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_fast_avx2_continue(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_fast_avx2_lookup4(const uint8_t* buf, size_t buf_sz);
-#if defined(__x86_64__) || defined(_M_X64)
+bool bench_utf8_fast_avx2_utf8d(const uint8_t* buf, size_t buf_sz);
+#if defined(__x86_64__)
 bool bench_utf8_early_exit_continue_haswell(const uint8_t* buf, size_t buf_sz);
 #endif
 }
@@ -224,7 +226,7 @@ RunBench(benchmark::State& state, ValidateFn fn, FillFn fill)
 
 /* BENCH_SUITE(early_exit, bench_utf8_early_exit); */
 BENCH_SUITE(early_exit_cont, bench_utf8_early_exit_continue);
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__)
 /* BENCH_SUITE(eex_cont_haswell, bench_utf8_early_exit_continue_haswell); */
 #endif
 /* BENCH_SUITE(orig, bench_utf8_orig); */
@@ -233,10 +235,12 @@ BENCH_SUITE(early_exit_cont, bench_utf8_early_exit_continue);
 BENCH_SUITE(scalar_slow, bench_utf8_scalar_slow);
 /* BENCH_SUITE(fast_simd_restart, bench_utf8_fast_simd_restart); */
 BENCH_SUITE(fast_simd_cont, bench_utf8_fast_simd_continue);
-#if defined(__x86_64__) || defined(_M_X64)
+BENCH_SUITE(fast_scalar_utf8d, bench_utf8_fast_scalar_utf8d);
+#if defined(__x86_64__)
 BENCH_SUITE(fast_simd4_cont, bench_utf8_fast_simd4_continue);
 BENCH_SUITE(fast_avx2_cont, bench_utf8_fast_avx2_continue);
 BENCH_SUITE(fast_avx2_lookup4, bench_utf8_fast_avx2_lookup4);
+BENCH_SUITE(fast_avx2_utf8d, bench_utf8_fast_avx2_utf8d);
 #endif
 } // namespace
 

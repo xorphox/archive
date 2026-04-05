@@ -1,8 +1,8 @@
 #pragma once
 
 /*
- * AVX2 (SIMDe) prefix scan: skip leading bytes that are ASCII (high bit clear).
- * Build TUs that include this with -march=haswell (or MSVC /arch:AVX2) when using
+ * AVX2 (SIMDe) prefix scan: end of leading ASCII (high bit clear on each byte).
+ * Build TUs that include this with -march=haswell when using
  * native intrinsics; SIMDe lowers for other targets.
  */
 
@@ -14,12 +14,11 @@
 #include "utf8_bench_inline.h"
 
 /*
- * Returns the index of the first byte that is not part of a verified ASCII prefix
- * (i.e. first byte with bit 0x80 set), or buf_sz if all bytes are ASCII.
+ * Index of the first byte with bit 0x80 set, or buf_sz if all bytes are ASCII (< 0x80).
  * buf == NULL is treated like an empty prefix (returns 0).
  */
 UTF8_BENCH_INLINE size_t
-utf8_fast_avx2_skip_ascii(const uint8_t *buf, size_t buf_sz)
+utf8_fast_avx2_ascii_prefix_end(const uint8_t *buf, size_t buf_sz)
 {
 	size_t i = 0;
 	simde__m256i highbit = simde_mm256_set1_epi8((char)0x80);
@@ -30,7 +29,7 @@ utf8_fast_avx2_skip_ascii(const uint8_t *buf, size_t buf_sz)
 
 	while (i + 32 <= buf_sz) {
 		simde__m256i v = simde_mm256_loadu_si256(
-			(const simde__m256i *)(const void *)(buf + i));
+				(const simde__m256i *)(const void *)(buf + i));
 		simde__m256i masked = simde_mm256_and_si256(v, highbit);
 
 		if (simde_mm256_movemask_epi8(masked)) {

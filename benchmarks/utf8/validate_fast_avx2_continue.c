@@ -7,8 +7,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "utf8_bench_inline.h"
 #include "utf8_fast_avx2.h"
 #include "utf8_slow_scalar.h"
+
+static UTF8_BENCH_NOINLINE bool
+utf8_slow_scalar_suffix(const uint8_t *buf, size_t buf_sz)
+{
+	return utf8_slow_scalar_validate(buf, buf_sz);
+}
 
 bool
 as_str_is_valid_utf8(const uint8_t *buf, size_t buf_sz)
@@ -17,11 +24,11 @@ as_str_is_valid_utf8(const uint8_t *buf, size_t buf_sz)
 		return buf_sz == 0;
 	}
 
-	size_t i = utf8_fast_avx2_skip_ascii(buf, buf_sz);
+	size_t i = utf8_fast_avx2_ascii_prefix_end(buf, buf_sz);
 
 	if (i == buf_sz) {
 		return true;
 	}
 
-	return utf8_slow_scalar_validate(buf + i, buf_sz - i);
+	return utf8_slow_scalar_suffix(buf + i, buf_sz - i);
 }

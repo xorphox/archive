@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.18)
 project(utf8_validate_bench LANGUAGES C CXX)
 
+# GCC or Clang only (no MSVC / other toolchains).
+if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+  message(FATAL_ERROR "benchmarks/utf8: GCC or Clang required (C compiler is ${CMAKE_C_COMPILER_ID}).")
+endif()
+if(NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  message(FATAL_ERROR "benchmarks/utf8: GCC or Clang required (C++ compiler is ${CMAKE_CXX_COMPILER_ID}).")
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # C++ driver only; C validators follow Aerospike server (make_in/Makefile.in) style.
@@ -31,9 +39,7 @@ if(UTF8_BUILD_TESTS)
   add_executable(utf8_lookup4_slow_test test/utf8_lookup4_slow_test.cc)
   target_include_directories(utf8_lookup4_slow_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
   target_link_libraries(utf8_lookup4_slow_test PRIVATE GTest::gtest_main)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(utf8_lookup4_slow_test PRIVATE -Wall)
-  endif()
+  target_compile_options(utf8_lookup4_slow_test PRIVATE -Wall)
 
   include(GoogleTest)
   # ctest is not a TTY; without this GTest disables ANSI colors (auto mode).
@@ -47,8 +53,20 @@ endif()
 set(ARCHIVE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../..")
 set(SIMDE_INCLUDE_DIR "${ARCHIVE_ROOT}/submodules/simde")
 
-# Match aerospike-server make_in/Makefile.in: COMMON_CFLAGS + AS_CFLAGS for C (no -Werror / -MMD).
-set(AS_C_FLAGS
+# =============================================================================
+# C compiler flags — what goes where
+#
+#   Target                          | CMake variable / rule
+#   ------------------------------- | ------------------------------------------
+#   bench_utf8 C shims (default)    | UTF8_BENCH_C_FLAGS — nocona on x86_64
+#   bench_utf8 C++ driver           | -O3 only (below)
+#   x86_64 Haswell-only shims (5)   | OBJECT lib utf8_bench_x86_haswell — UTF8_BENCH_C_FLAGS_X86_64_HASWELL
+#   utf8_lookup4_slow_test          | -Wall (CXX only)
+#
+# Haswell shims are never mixed with nocona: they live only in utf8_bench_x86_haswell.
+# =============================================================================
+
+set(UTF8_BENCH_C_FLAGS_BASE
   -gdwarf-4
   -g3
   # -O3 comes from CMAKE_BUILD_TYPE=Release (matches Aerospike O=3)
@@ -61,24 +79,40 @@ set(AS_C_FLAGS
   -D_GNU_SOURCE
   -DENHANCED_ALLOC
 )
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
-  list(APPEND AS_C_FLAGS -march=nocona -DMARCH_x86_64)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|ARM64)$")
-  # Makefile.in aarch64 branch (TSO plugin omitted here).
-  list(APPEND AS_C_FLAGS -mcpu=neoverse-n1 -DMARCH_aarch64)
-endif()
+
+set(UTF8_BENCH_C_FLAGS_GNU_EXTRA "")
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
   if(CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 8.0)
-    list(APPEND AS_C_FLAGS -fno-stack-clash-protection)
+    list(APPEND UTF8_BENCH_C_FLAGS_GNU_EXTRA -fno-stack-clash-protection)
   endif()
   if(CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 9.0)
-    list(APPEND AS_C_FLAGS -Wno-address-of-packed-member)
+    list(APPEND UTF8_BENCH_C_FLAGS_GNU_EXTRA -Wno-address-of-packed-member)
   endif()
+endif()
+
+# Default C flags for bench_utf8 shim sources (and any other TU on this target).
+set(UTF8_BENCH_C_FLAGS ${UTF8_BENCH_C_FLAGS_BASE} ${UTF8_BENCH_C_FLAGS_GNU_EXTRA})
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+  list(APPEND UTF8_BENCH_C_FLAGS -march=nocona -DMARCH_x86_64)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|ARM64)$")
+  list(APPEND UTF8_BENCH_C_FLAGS -mcpu=neoverse-n1 -DMARCH_aarch64)
+endif()
+
+# Single -march=haswell for all x86_64 shims that need Haswell (SIMDe AVX2, SSE4.1 paths, etc.).
+set(UTF8_BENCH_C_FLAGS_X86_64_HASWELL "")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+  set(UTF8_BENCH_C_FLAGS_X86_64_HASWELL
+    ${UTF8_BENCH_C_FLAGS_BASE}
+    ${UTF8_BENCH_C_FLAGS_GNU_EXTRA}
+    -march=haswell
+    -DMARCH_x86_64
+  )
 endif()
 
 option(UTF8_BENCH_FULL_RANGE "Benchmark sizes 8 B … 8 MiB (default: 8 MiB only)" OFF)
 
-set(SHIM_SRCS
+# bench_utf8: always these C shims (nocona / neoverse as above).
+set(UTF8_BENCH_SHIM_SRCS
   shim_early_exit.c
   shim_early_exit_continue.c
   shim_orig.c
@@ -87,17 +121,36 @@ set(SHIM_SRCS
   shim_scalar_slow.c
   shim_fast_simd_restart.c
   shim_fast_simd_continue.c
+  shim_fast_scalar_utf8d.c
 )
 
-# SIMD4 / AVX2 shims: x86_64 only, both TUs compiled with Haswell-class ISA.
+# x86_64 only: linked as OBJECTs — utf8_bench_x86_haswell (Haswell only, no nocona).
+set(UTF8_BENCH_X86_HASWELL_SHIMS
+  shim_early_exit_continue_haswell.c
+  shim_fast_simd4_continue.c
+  shim_fast_avx2_continue.c
+  shim_fast_avx2_lookup4.c
+  shim_fast_avx2_utf8d.c
+)
+
+set(UTF8_BENCH_X86_HASWELL_OBJECTS "")
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
-  list(APPEND SHIM_SRCS shim_early_exit_continue_haswell.c)
-  list(APPEND SHIM_SRCS shim_fast_simd4_continue.c)
-  list(APPEND SHIM_SRCS shim_fast_avx2_continue.c)
-  list(APPEND SHIM_SRCS shim_fast_avx2_lookup4.c)
+  add_library(utf8_bench_x86_haswell OBJECT ${UTF8_BENCH_X86_HASWELL_SHIMS})
+  target_include_directories(utf8_bench_x86_haswell PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${SIMDE_INCLUDE_DIR}"
+  )
+  target_compile_options(utf8_bench_x86_haswell PRIVATE
+    "$<$<COMPILE_LANGUAGE:C>:${UTF8_BENCH_C_FLAGS_X86_64_HASWELL}>"
+  )
+  set(UTF8_BENCH_X86_HASWELL_OBJECTS $<TARGET_OBJECTS:utf8_bench_x86_haswell>)
 endif()
 
-add_executable(bench_utf8 bench_utf8.cpp ${SHIM_SRCS})
+add_executable(bench_utf8
+  bench_utf8.cpp
+  ${UTF8_BENCH_SHIM_SRCS}
+  ${UTF8_BENCH_X86_HASWELL_OBJECTS}
+)
 if(UTF8_BENCH_FULL_RANGE)
   target_compile_definitions(bench_utf8 PRIVATE BENCH_UTF8_FULL_RANGE=1)
 endif()
@@ -108,24 +161,7 @@ target_include_directories(bench_utf8 PRIVATE
 target_link_libraries(bench_utf8 PRIVATE benchmark::benchmark)
 
 target_compile_options(bench_utf8 PRIVATE
-  "$<$<COMPILE_LANGUAGE:C>:${AS_C_FLAGS}>"
+  "$<$<COMPILE_LANGUAGE:C>:${UTF8_BENCH_C_FLAGS}>"
 )
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  target_compile_options(bench_utf8 PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-O3>)
-endif()
-
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
-  if(MSVC)
-    # Haswell-class ISA for both TUs (SSE4.1-only code still fine under AVX2 arch on MSVC).
-    set_source_files_properties(shim_early_exit_continue_haswell.c PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
-    set_source_files_properties(shim_fast_simd4_continue.c PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
-    set_source_files_properties(shim_fast_avx2_continue.c PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
-    set_source_files_properties(shim_fast_avx2_lookup4.c PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
-  else()
-    set_source_files_properties(shim_early_exit_continue_haswell.c PROPERTIES COMPILE_OPTIONS "-march=haswell")
-    set_source_files_properties(shim_fast_simd4_continue.c PROPERTIES COMPILE_OPTIONS "-march=haswell")
-    set_source_files_properties(shim_fast_avx2_continue.c PROPERTIES COMPILE_OPTIONS "-march=haswell")
-    set_source_files_properties(shim_fast_avx2_lookup4.c PROPERTIES COMPILE_OPTIONS "-march=haswell")
-  endif()
-endif()
+target_compile_options(bench_utf8 PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-O3>)
