@@ -49,7 +49,7 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
   endif()
 endif()
 
-set(UTF8_SCALAR_SRCS utf8_scalar_slow.c)
+option(UTF8_BENCH_FULL_RANGE "Benchmark sizes 8 B … 8 MiB (default: 8 MiB only)" OFF)
 
 set(SHIM_SRCS
   shim_early_exit.c
@@ -60,10 +60,19 @@ set(SHIM_SRCS
   shim_scalar_slow.c
   shim_fast_simd_restart.c
   shim_fast_simd_continue.c
-  shim_all_simd.c
 )
 
-add_executable(bench_utf8 bench_utf8.cpp ${UTF8_SCALAR_SRCS} ${SHIM_SRCS})
+# SIMD4 / AVX2 shims: x86_64 only, both TUs compiled with Haswell-class ISA.
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+  list(APPEND SHIM_SRCS shim_early_exit_continue_haswell.c)
+  list(APPEND SHIM_SRCS shim_fast_simd4_continue.c)
+  list(APPEND SHIM_SRCS shim_fast_avx2_continue.c)
+endif()
+
+add_executable(bench_utf8 bench_utf8.cpp ${SHIM_SRCS})
+if(UTF8_BENCH_FULL_RANGE)
+  target_compile_definitions(bench_utf8 PRIVATE BENCH_UTF8_FULL_RANGE=1)
+endif()
 target_include_directories(bench_utf8 PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}"
   "${SIMDE_INCLUDE_DIR}"
@@ -76,4 +85,17 @@ target_compile_options(bench_utf8 PRIVATE
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(bench_utf8 PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-O3>)
+endif()
+
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+  if(MSVC)
+    # Haswell-class ISA for both TUs (SSE4.1-only code still fine under AVX2 arch on MSVC).
+    set_source_files_properties(shim_early_exit_continue_haswell.c PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
+    set_source_files_properties(shim_fast_simd4_continue.c PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
+    set_source_files_properties(shim_fast_avx2_continue.c PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
+  else()
+    set_source_files_properties(shim_early_exit_continue_haswell.c PROPERTIES COMPILE_OPTIONS "-march=haswell")
+    set_source_files_properties(shim_fast_simd4_continue.c PROPERTIES COMPILE_OPTIONS "-march=haswell")
+    set_source_files_properties(shim_fast_avx2_continue.c PROPERTIES COMPILE_OPTIONS "-march=haswell")
+  endif()
 endif()

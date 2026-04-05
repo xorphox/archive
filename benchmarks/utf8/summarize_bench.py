@@ -8,7 +8,11 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-PROFILES = ("ascii_random", "utf8_typical", "mostly_ascii")
+PROFILES = ("ascii_random", "half_ascii_first", "mostly_ascii")
+
+# Default "% faster" baseline (-march=nocona). Use --baseline early_exit_cont_haswell on x86_64
+# for the same algorithm compiled with -march=haswell (isolates SIMD vs ISA).
+DEFAULT_BASELINE_IMPL = "early_exit_cont"
 
 
 def parse_benchmark_name(full_name: str) -> Optional[Tuple[str, str, int]]:
@@ -84,6 +88,48 @@ def print_table(
         print(row)
 
 
+def print_delta_table(
+    profile: str,
+    sizes: list,
+    impls: list,
+    grid: Dict[str, Dict[int, float]],
+    baseline_impl: str,
+) -> None:
+    """Print % faster than baseline (positive = lower cpu_time than baseline)."""
+    base_grid = grid.get(baseline_impl)
+    if not base_grid:
+        print()
+        print(f"(skip Δ% table for {profile}: no {baseline_impl!r} in this JSON)")
+        return
+
+    title = f"{profile} — % faster than {baseline_impl} (positive = faster)"
+    print()
+    print(title)
+    print("=" * len(title))
+
+    col_w = max(10, max(len(human_bytes(s)) for s in sizes) + 1)
+    pct_w = max(8, max(len(i) for i in impls) + 1)
+
+    header = f"{'size':<{col_w}}" + "".join(f"{i:>{pct_w}}" for i in impls)
+    print(header)
+    print("-" * len(header))
+
+    for sz in sizes:
+        row = f"{human_bytes(sz):<{col_w}}"
+        b = base_grid.get(sz)
+        for impl in impls:
+            v = grid.get(impl, {}).get(sz)
+            if b is None or v is None or b <= 0:
+                row += f"{'—':>{pct_w}}"
+            elif impl == baseline_impl:
+                row += f"{'0.0%':>{pct_w}}"
+            else:
+                pct = (b - v) / b * 100.0
+                cell = f"{pct:+.1f}%"
+                row += f"{cell:>{pct_w}}"
+        print(row)
+
+
 def try_plot(
     out_png: Path,
     profiles: list[str],
@@ -132,6 +178,17 @@ def main() -> int:
         help="Write chart to this path (requires matplotlib)",
     )
     ap.add_argument("--no-plot", action="store_true", help="Skip chart even if matplotlib exists")
+    ap.add_argument(
+        "--baseline",
+        default=DEFAULT_BASELINE_IMPL,
+        metavar="IMPL",
+        help=f"Implementation name for %% faster table (default: {DEFAULT_BASELINE_IMPL})",
+    )
+    ap.add_argument(
+        "--no-delta",
+        action="store_true",
+        help="Do not print %% faster vs baseline table",
+    )
     args = ap.parse_args()
 
     if not args.json_path.is_file():
@@ -152,6 +209,8 @@ def main() -> int:
             if prof == profile:
                 grid[impl][sz] = cpu_ns
         print_table(profile, sizes, impls, grid)
+        if not args.no_delta:
+            print_delta_table(profile, sizes, impls, grid, args.baseline)
 
     png_path = args.png
     if png_path is None:

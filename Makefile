@@ -9,6 +9,7 @@
 #
 # Optional: BENCH_FLAGS='--benchmark_filter=...'  (passed to bench_utf8 before --benchmark_out)
 #           BENCH_FLAGS='--benchmark_min_time=0.1' for quicker (less accurate) runs
+#           UTF8_BENCH_FULL_RANGE=ON  — reconfigure to sweep 8 B … 8 MiB (default: 8 MiB only)
 
 CMAKE ?= cmake
 PYTHON ?= python3
@@ -22,13 +23,15 @@ SUMMARIZE := $(UTF8_BENCH_DIR)/summarize_bench.py
 # Thread/main stack soft limit for benchmark runs (KB). 8192 = 8 MiB.
 STACK_KB ?= 8192
 BENCH_FLAGS ?=
+UTF8_BENCH_FULL_RANGE ?= OFF
 
 .PHONY: all bench bench-build bench-run clean
 
 all: bench
 
 bench-build:
-	$(CMAKE) -S $(UTF8_BENCH_DIR) -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
+	$(CMAKE) -S $(UTF8_BENCH_DIR) -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
+		-DUTF8_BENCH_FULL_RANGE=$(UTF8_BENCH_FULL_RANGE)
 	ln -sf build/compile_commands.json $(UTF8_BENCH_DIR)/compile_commands.json
 	$(CMAKE) --build $(BUILD_DIR) -j$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 	@echo "Built $(BENCH_BIN)"

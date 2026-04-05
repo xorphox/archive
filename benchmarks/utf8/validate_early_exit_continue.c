@@ -13,7 +13,7 @@
 #include "utf8_scalar_slow.h"
 
 /* Smallest i such that buf[i] has high bit set, or buf_sz if all ASCII. */
-static inline size_t
+UTF8_BENCH_INLINE size_t
 ascii_prefix_end(const uint8_t* buf, size_t buf_sz)
 {
 	size_t off = 0;
