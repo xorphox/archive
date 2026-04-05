@@ -43,7 +43,7 @@ UTF8_BENCH_MONOLITH ?= OFF
 
 # Runtime size filter (appended to BENCH_FLAGS when FULL_RANGE=OFF).
 ifneq ($(UTF8_BENCH_FULL_RANGE),ON)
-BENCH_SIZE_FILTER := --benchmark_filter='.*/8$$|.*/8388608$$'
+BENCH_SIZE_FILTER := "--benchmark_filter=.*/8(388608)?\$$"
 else
 BENCH_SIZE_FILTER :=
 endif

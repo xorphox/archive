@@ -190,10 +190,6 @@ utf8_bench_add_one(bench_utf8_one_scalar_EeC
 # "A" (aligned) variants: utf8_fast_scalar compiled as noinline+hot in its own
 # .text.hot section with -falign-functions=64 — keeps the tight 64-bit ASCII
 # loop in a single 32-byte DSB window regardless of binary layout.
-set_source_files_properties(utf8_fast_aligned.c PROPERTIES
-  COMPILE_OPTIONS "-falign-functions=64"
-)
-
 function(utf8_bench_add_one_aligned exe cpp shim)
   add_executable(${exe} ${cpp} ${shim} utf8_fast_aligned.c)
   target_include_directories(${exe} PRIVATE
