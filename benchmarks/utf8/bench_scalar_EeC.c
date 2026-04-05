@@ -1,6 +1,6 @@
-// early_exit_cont: utf8_fast_scalar + utf8_slow_scalar (headers). Define
-// UTF8_BENCH_USE_ALWAYS_INLINE below for always_inline on utf8_fast_* / utf8_slow_* in this TU.
-// Compare bench_early_exit.c, bench_fast_scalar_utf8d.c.
+// bench_scalar_EeC — Ee (early exit on all-ASCII) + C (continue on suffix). Shorthand for Fscalar_Sscalar.
+// UTF8_BENCH_USE_ALWAYS_INLINE: always_inline for utf8_fast_* / utf8_slow_* in this TU.
+// Compare bench_scalar_EeR.c, bench_Fscalar_Sutf8d_EeC.c.
 
 #include <stdbool.h>
 #include <stddef.h>

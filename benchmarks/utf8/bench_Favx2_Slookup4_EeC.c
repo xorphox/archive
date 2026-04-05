@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// UTF8_BENCH_USE_ALWAYS_INLINE: always_inline for utf8_fast_* / utf8_slow_* in this TU.
+#define UTF8_BENCH_USE_ALWAYS_INLINE
 #include "utf8_fast_avx2.h"
 #include "utf8_slow_lookup4.h"
 
@@ -15,7 +17,7 @@ as_str_is_valid_utf8(const uint8_t *buf, size_t buf_sz)
 		return buf_sz == 0;
 	}
 
-	size_t i = utf8_fast_avx2_ascii_prefix_end(buf, buf_sz);
+	size_t i = utf8_fast_avx2(buf, buf_sz);
 
 	if (i == buf_sz) {
 		return true;

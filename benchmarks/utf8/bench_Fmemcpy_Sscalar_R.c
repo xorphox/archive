@@ -1,3 +1,5 @@
+// bench_Fmemcpy_Sscalar_R — Fmemcpy ASCII fast path + Sscalar + R (full-buffer slow).
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -7,8 +9,8 @@
 
 #include "utf8_slow_scalar.h"
 
-UTF8_BENCH_INLINE uint64_t
-accumulate64(const uint8_t* buf, size_t buf_sz)
+UTF8_BENCH_INLINE bool
+utf8_fast_memcpy(const uint8_t* buf, size_t buf_sz)
 {
 	uint64_t acc = 0;
 	size_t i = 0;
@@ -23,7 +25,7 @@ accumulate64(const uint8_t* buf, size_t buf_sz)
 		acc |= buf[i];
 	}
 
-	return acc;
+	return (acc & 0x8080808080808080ULL) == 0;
 }
 
 bool
@@ -33,7 +35,7 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 		return buf_sz == 0;
 	}
 
-	if ((accumulate64(buf, buf_sz) & 0x8080808080808080ULL) == 0) {
+	if (utf8_fast_memcpy(buf, buf_sz)) {
 		return true;
 	}
 

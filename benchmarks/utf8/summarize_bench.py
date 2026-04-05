@@ -12,7 +12,7 @@ PROFILES = ("ascii_random", "half_ascii_first", "utf8_typical", "mostly_ascii")
 
 # Default "% faster" baseline (-march=nocona). Use --baseline eex_cont_haswell on x86_64
 # for the same algorithm compiled with -march=haswell (isolates SIMD vs ISA).
-DEFAULT_BASELINE_IMPL = "early_exit_cont"
+DEFAULT_BASELINE_IMPL = "scalar_EeC"
 
 
 def parse_benchmark_name(full_name: str) -> Optional[Tuple[str, str, int]]:

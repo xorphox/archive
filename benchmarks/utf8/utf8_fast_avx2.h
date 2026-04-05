@@ -15,10 +15,9 @@
 #define UTF8_FAST_AVX2_INLINE UTF8_BENCH_HDR_INLINE
 #endif
 
-// Index of the first byte with bit 0x80 set, or buf_sz if all bytes are ASCII (< 0x80).
-// buf == NULL is treated like an empty prefix (returns 0).
+// First high-bit byte index, or buf_sz if all ASCII. buf == NULL → 0.
 UTF8_FAST_AVX2_INLINE size_t
-utf8_fast_avx2_ascii_prefix_end(const uint8_t *buf, size_t buf_sz)
+utf8_fast_avx2(const uint8_t *buf, size_t buf_sz)
 {
 	size_t i = 0;
 	simde__m256i highbit = simde_mm256_set1_epi8((char)0x80);

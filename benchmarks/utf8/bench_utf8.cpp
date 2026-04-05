@@ -6,22 +6,21 @@
 #include <vector>
 
 extern "C" {
-// Temp: trim bench driver — restore when re-enabling suites below.
-// bool bench_utf8_early_exit(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_early_exit_continue(const uint8_t* buf, size_t buf_sz);
-// bool bench_utf8_orig(const uint8_t* buf, size_t buf_sz);
-// bool bench_utf8_pre_memcpy(const uint8_t* buf, size_t buf_sz);
-// bool bench_utf8_pre_single(const uint8_t* buf, size_t buf_sz);
-// bool bench_utf8_scalar_slow(const uint8_t* buf, size_t buf_sz);
-// bool bench_utf8_fast_simd_restart(const uint8_t* buf, size_t buf_sz);
-// bool bench_utf8_fast_simd_continue(const uint8_t* buf, size_t buf_sz);
-bool bench_utf8_fast_scalar_utf8d(const uint8_t* buf, size_t buf_sz);
-// bool bench_utf8_fast_simd4_continue(const uint8_t* buf, size_t buf_sz);
-// bool bench_utf8_fast_avx2_continue(const uint8_t* buf, size_t buf_sz);
-// bool bench_utf8_fast_avx2_lookup4(const uint8_t* buf, size_t buf_sz);
-// bool bench_utf8_fast_avx2_utf8d(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_scalar_EeR(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_scalar_EeC(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_Forig_Sscalar_R(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_Fmemcpy_Sscalar_R(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_Fsingle_Sscalar_R(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_Sscalar(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_Fsse2_Sscalar_EeR(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_Fsse2_Sscalar_EeC(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_Fscalar_Sutf8d_EeC(const uint8_t* buf, size_t buf_sz);
 #if defined(__x86_64__)
-// bool bench_utf8_early_exit_continue_haswell(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_scalar_EeC_haswell(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_Fsse41_Sscalar_EeC(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_Favx2_Sscalar_EeC(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_Favx2_Slookup4_EeC(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_Favx2_Sutf8d_EeC(const uint8_t* buf, size_t buf_sz);
 #endif
 }
 
@@ -222,23 +221,25 @@ RunBench(benchmark::State& state, ValidateFn fn, FillFn fill)
 	}																		   \
 	BENCHMARK(BM_##impl_name##_mostly_ascii) BENCH_UTF8_SIZE_SUFFIX
 
-// BENCH_SUITE(early_exit, bench_utf8_early_exit);
-BENCH_SUITE(early_exit_cont, bench_utf8_early_exit_continue);
+// Legacy table column → BM_<impl>_…:
+//   early_exit_cont      → scalar_EeC
+//   fast_simd_cont       → Fsse2_Sscalar_EeC
+//   fast_simd4_cont      → Fsse41_Sscalar_EeC   (x86_64 Haswell object TU)
+//   fast_avx2_cont       → Favx2_Sscalar_EeC    (x86_64 Haswell object TU)
+//   fast_avx2_lookup4    → Favx2_Slookup4_EeC   (x86_64 Haswell object TU)
+//   fast_avx2_utf8d      → Favx2_Sutf8d_EeC     (x86_64 Haswell object TU)
+//   fast_scalar_utf8d    → Fscalar_Sutf8d_EeC
+//   scalar_slow          → Sscalar
+// BENCH_SUITE(scalar_EeR, bench_utf8_scalar_EeR);
+BENCH_SUITE(scalar_EeC, bench_utf8_scalar_EeC);
+BENCH_SUITE(Fsse2_Sscalar_EeC, bench_utf8_Fsse2_Sscalar_EeC);
+BENCH_SUITE(Fscalar_Sutf8d_EeC, bench_utf8_Fscalar_Sutf8d_EeC);
+BENCH_SUITE(Sscalar, bench_utf8_Sscalar);
 #if defined(__x86_64__)
-// BENCH_SUITE(eex_cont_haswell, bench_utf8_early_exit_continue_haswell);
-#endif
-// BENCH_SUITE(orig, bench_utf8_orig);
-// BENCH_SUITE(pre_memcpy, bench_utf8_pre_memcpy);
-// BENCH_SUITE(pre_single, bench_utf8_pre_single);
-// BENCH_SUITE(scalar_slow, bench_utf8_scalar_slow);
-// BENCH_SUITE(fast_simd_restart, bench_utf8_fast_simd_restart);
-// BENCH_SUITE(fast_simd_cont, bench_utf8_fast_simd_continue);
-BENCH_SUITE(fast_scalar_utf8d, bench_utf8_fast_scalar_utf8d);
-#if defined(__x86_64__)
-// BENCH_SUITE(fast_simd4_cont, bench_utf8_fast_simd4_continue);
-// BENCH_SUITE(fast_avx2_cont, bench_utf8_fast_avx2_continue);
-// BENCH_SUITE(fast_avx2_lookup4, bench_utf8_fast_avx2_lookup4);
-// BENCH_SUITE(fast_avx2_utf8d, bench_utf8_fast_avx2_utf8d);
+BENCH_SUITE(Fsse41_Sscalar_EeC, bench_utf8_Fsse41_Sscalar_EeC);
+BENCH_SUITE(Favx2_Sscalar_EeC, bench_utf8_Favx2_Sscalar_EeC);
+BENCH_SUITE(Favx2_Slookup4_EeC, bench_utf8_Favx2_Slookup4_EeC);
+BENCH_SUITE(Favx2_Sutf8d_EeC, bench_utf8_Favx2_Sutf8d_EeC);
 #endif
 } // namespace
 

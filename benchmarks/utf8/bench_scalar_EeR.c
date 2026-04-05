@@ -1,3 +1,5 @@
+// bench_scalar_EeR — Ee (early exit on all-ASCII) + R (reset: slow path over full buffer).
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -6,7 +8,7 @@
 
 #include "utf8_slow_scalar.h"
 
-UTF8_BENCH_INLINE uint64_t
+UTF8_BENCH_INLINE bool
 accumulate64(const uint8_t* buf, size_t buf_sz)
 {
 	// 1. HEAD: peel until 8-byte aligned
@@ -17,10 +19,10 @@ accumulate64(const uint8_t* buf, size_t buf_sz)
 		head = buf_sz;
 	}
 
-	uint64_t acc = 0;
-
 	for (size_t i = 0; i < head; i++) {
-		acc |= (uint64_t)buf[i];
+		if ((buf[i] & 0x80) != 0) {
+			return false;
+		}
 	}
 
 	buf += head;
@@ -31,7 +33,9 @@ accumulate64(const uint8_t* buf, size_t buf_sz)
 	const uint64_t* p64 = (const uint64_t*)buf;
 
 	for (size_t i = 0; i < n64; i++) {
-		acc |= p64[i];
+		if ((p64[i] & 0x8080808080808080ULL) != 0) {
+			return false;
+		}
 	}
 
 	// 3. TAIL: last 0–7 bytes
@@ -39,13 +43,14 @@ accumulate64(const uint8_t* buf, size_t buf_sz)
 
 	if (tail) {
 		const uint8_t* t = buf + (n64 * 8);
-
 		for (size_t i = 0; i < tail; i++) {
-			acc |= t[i];
+			if ((t[i] & 0x80) != 0) {
+				return false;
+			}
 		}
 	}
 
-	return acc;
+	return true;
 }
 
 bool
@@ -55,7 +60,7 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 		return buf_sz == 0;
 	}
 
-	if ((accumulate64(buf, buf_sz) & 0x8080808080808080ULL) == 0) {
+	if (accumulate64(buf, buf_sz)) {
 		return true;
 	}
 

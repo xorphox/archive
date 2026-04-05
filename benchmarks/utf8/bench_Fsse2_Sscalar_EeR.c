@@ -1,6 +1,6 @@
 // SIMD “all ASCII?” fast path; if it fails, scalar UTF-8 validation restarts from buf[0] over
 // the *entire* buffer (ASCII prefix is visited again).
-// Compare: bench_fast_simd_continue.c (slow path only on the non-ASCII suffix).
+// Compare: bench_Fsse2_Sscalar_EeC.c (C: slow path only on suffix; this file is R: full-buffer slow).
 
 #include <stdbool.h>
 #include <stddef.h>

@@ -1,13 +1,15 @@
-// Like bench_fast_simd_continue.c, but ASCII chunk test uses SSE4.1 simde_mm_test_all_zeros
-// instead of movemask_epi8. Build this TU with at least -msse4.1 (or a Nehalem+ -march) on x86
-// so the native PTEST path can be used.
+// SIMD + scalar tail find the first byte that is not plain ASCII, then run scalar UTF-8
+// validation only on buf[i..buf_sz) — no second pass over the leading ASCII run.
+// Compare: bench_Fsse2_Sscalar_EeR.c (R: slow path rescans from buf[0] over full buffer).
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include <simde/x86/sse4.1.h>
+#include <simde/x86/sse2.h>
 
+// UTF8_BENCH_USE_ALWAYS_INLINE: always_inline for utf8_slow_* in this TU.
+#define UTF8_BENCH_USE_ALWAYS_INLINE
 #include "utf8_slow_scalar.h"
 
 bool
@@ -24,9 +26,8 @@ as_str_is_valid_utf8(const uint8_t* buf, size_t buf_sz)
 		simde__m128i v = simde_mm_loadu_si128(
 				(const simde__m128i*)(const void*)(buf + i));
 		simde__m128i masked = simde_mm_and_si128(v, highbit);
-
-		// SSE4.1: true iff (masked & masked) is all zeros — same as movemask==0
-		if (! simde_mm_test_all_zeros(masked, masked)) {
+		// SSE2: any high bit set in the lane
+		if (simde_mm_movemask_epi8(masked)) {
 			break;
 		}
 
