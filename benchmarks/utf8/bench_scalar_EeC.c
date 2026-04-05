@@ -1,6 +1,6 @@
 // bench_scalar_EeC — Ee (early exit on all-ASCII) + C (continue on suffix). Shorthand for Fscalar_Sscalar.
 // UTF8_BENCH_USE_ALWAYS_INLINE: always_inline for utf8_fast_* / utf8_slow_* in this TU.
-// Compare bench_scalar_EeR.c, bench_Fscalar_Sutf8d_EeC.c.
+// Compare bench_eec_orig.c (single-TU static copy), bench_scalar_EeR.c, bench_Fscalar_Sutf8d_EeC.c.
 
 #include <stdbool.h>
 #include <stddef.h>

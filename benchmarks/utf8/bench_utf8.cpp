@@ -8,6 +8,7 @@
 extern "C" {
 bool bench_utf8_scalar_EeR(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_scalar_EeC(const uint8_t* buf, size_t buf_sz);
+bool bench_utf8_eec_orig(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_Forig_Sscalar_R(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_Fmemcpy_Sscalar_R(const uint8_t* buf, size_t buf_sz);
 bool bench_utf8_Fsingle_Sscalar_R(const uint8_t* buf, size_t buf_sz);
@@ -25,17 +26,20 @@ bool bench_utf8_Favx2_Sutf8d_EeC(const uint8_t* buf, size_t buf_sz);
 }
 
 namespace {
-// Temp: single 8 MiB only (re-enable for 8 B … 8 MiB sweep).
+// DO NOT REMOVE THE #define LINE BELOW FROM THIS FILE — only toggle by commenting/uncommenting it.
 // #define BENCH_UTF8_FULL_RANGE
-// Input size for benchmarks (state.range(0)):
-//   Default: single 8 MiB (faster edit / measure cycles).
-//   Full sweep 8 B … 8 MiB: compile with -DBENCH_UTF8_FULL_RANGE=1 or CMake
-//   -DUTF8_BENCH_FULL_RANGE=ON.
+// Temp: single 8 MiB only when the #define above is commented out (re-enable for 8 B … 8 MiB sweep).
 #ifndef BENCH_UTF8_FULL_RANGE
 #define BENCH_UTF8_SIZE_SUFFIX ->Arg(8 << 20)
 #else
 #define BENCH_UTF8_SIZE_SUFFIX ->RangeMultiplier(4)->Range(8, 8 << 20)
 #endif
+// Full-range caveat: with BENCH_UTF8_FULL_RANGE, a full ./bench_utf8 run executes smaller sizes
+// (and other suites) before …/8388608, so turbo/thermal/cache differ from a single-Arg build.
+// Compare fairly with --benchmark_filter=BM_scalar_EeC_ascii_random/8388608, or CMake
+// -DUTF8_BENCH_FULL_RANGE=ON without editing this file.
+// Input size for benchmarks (state.range(0)): default single 8 MiB; full sweep also via CMake
+// -DUTF8_BENCH_FULL_RANGE=ON.
 
 void
 Utf8Append(uint32_t cp, std::vector<uint8_t>& out)
@@ -222,7 +226,7 @@ RunBench(benchmark::State& state, ValidateFn fn, FillFn fill)
 	BENCHMARK(BM_##impl_name##_mostly_ascii) BENCH_UTF8_SIZE_SUFFIX
 
 // Legacy table column → BM_<impl>_…:
-//   early_exit_cont      → scalar_EeC
+//   early_exit_cont      → scalar_EeC  (eec_orig: same algo, single-TU; registered just above scalar_EeC)
 //   fast_simd_cont       → Fsse2_Sscalar_EeC
 //   fast_simd4_cont      → Fsse41_Sscalar_EeC   (x86_64 Haswell object TU)
 //   fast_avx2_cont       → Favx2_Sscalar_EeC    (x86_64 Haswell object TU)
@@ -231,7 +235,6 @@ RunBench(benchmark::State& state, ValidateFn fn, FillFn fill)
 //   fast_scalar_utf8d    → Fscalar_Sutf8d_EeC
 //   scalar_slow          → Sscalar
 // BENCH_SUITE(scalar_EeR, bench_utf8_scalar_EeR);
-BENCH_SUITE(scalar_EeC, bench_utf8_scalar_EeC);
 BENCH_SUITE(Fsse2_Sscalar_EeC, bench_utf8_Fsse2_Sscalar_EeC);
 BENCH_SUITE(Fscalar_Sutf8d_EeC, bench_utf8_Fscalar_Sutf8d_EeC);
 BENCH_SUITE(Sscalar, bench_utf8_Sscalar);
@@ -241,6 +244,10 @@ BENCH_SUITE(Favx2_Sscalar_EeC, bench_utf8_Favx2_Sscalar_EeC);
 BENCH_SUITE(Favx2_Slookup4_EeC, bench_utf8_Favx2_Slookup4_EeC);
 BENCH_SUITE(Favx2_Sutf8d_EeC, bench_utf8_Favx2_Sutf8d_EeC);
 #endif
+// eec_orig then scalar_EeC: both after SIMD/AVX suites; full-range A/B (single-TU vs headers).
+// scalar_EeC alone was last for thermal-order experiments; paired here for fairer comparison.
+BENCH_SUITE(eec_orig, bench_utf8_eec_orig);
+BENCH_SUITE(scalar_EeC, bench_utf8_scalar_EeC);
 } // namespace
 
 BENCHMARK_MAIN();

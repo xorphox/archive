@@ -115,6 +115,7 @@ option(UTF8_BENCH_FULL_RANGE "Benchmark sizes 8 B … 8 MiB (default: 8 MiB only
 set(UTF8_BENCH_SHIM_SRCS
   shim/shim_scalar_EeR.c
   shim/shim_scalar_EeC.c
+  shim/shim_eec_orig.c
   shim/shim_Forig_Sscalar_R.c
   shim/shim_Fmemcpy_Sscalar_R.c
   shim/shim_Fsingle_Sscalar_R.c
