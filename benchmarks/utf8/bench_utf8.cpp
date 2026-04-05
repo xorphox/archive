@@ -27,7 +27,7 @@ bool bench_utf8_Favx2_Sutf8d_EeC(const uint8_t* buf, size_t buf_sz);
 
 namespace {
 // DO NOT REMOVE THE #define LINE BELOW FROM THIS FILE — only toggle by commenting/uncommenting it.
-// #define BENCH_UTF8_FULL_RANGE
+#define BENCH_UTF8_FULL_RANGE
 // Temp: single 8 MiB only when the #define above is commented out (re-enable for 8 B … 8 MiB sweep).
 #ifndef BENCH_UTF8_FULL_RANGE
 #define BENCH_UTF8_SIZE_SUFFIX ->Arg(8 << 20)
