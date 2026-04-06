@@ -109,7 +109,19 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
   )
 endif()
 
+# -march=skylake-avx512 for AVX-512 shims.
+set(UTF8_BENCH_C_FLAGS_X86_64_AVX512 "")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+  set(UTF8_BENCH_C_FLAGS_X86_64_AVX512
+    ${UTF8_BENCH_C_FLAGS_BASE}
+    ${UTF8_BENCH_C_FLAGS_GNU_EXTRA}
+    -march=skylake-avx512
+    -DMARCH_x86_64
+  )
+endif()
+
 option(UTF8_BENCH_MONOLITH "Build monolithic bench_utf8 (all shims in one binary)" OFF)
+option(UTF8_BENCH_AVX512 "Build AVX-512 targets (needs Zen 4+ / Skylake-X+)" OFF)
 
 # Monolithic bench_utf8 (optional): all nocona shims + x86_64 Haswell OBJECT lib.
 if(UTF8_BENCH_MONOLITH)
@@ -220,6 +232,20 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
     bench_utf8_one_Favx2_Slookup4_EeC.cpp shim/shim_Favx2_Slookup4_EeC.c ON)
   utf8_bench_add_one(bench_utf8_one_Favx2_Sutf8d_EeC
     bench_utf8_one_Favx2_Sutf8d_EeC.cpp shim/shim_Favx2_Sutf8d_EeC.c ON)
+
+  if(UTF8_BENCH_AVX512)
+    add_executable(bench_utf8_one_Favx512_Sscalar_EeC
+      bench_utf8_one_Favx512_Sscalar_EeC.cpp shim/shim_Favx512_Sscalar_EeC.c)
+    target_include_directories(bench_utf8_one_Favx512_Sscalar_EeC PRIVATE
+      "${CMAKE_CURRENT_SOURCE_DIR}"
+      "${SIMDE_INCLUDE_DIR}"
+    )
+    target_link_libraries(bench_utf8_one_Favx512_Sscalar_EeC PRIVATE benchmark::benchmark)
+    target_compile_options(bench_utf8_one_Favx512_Sscalar_EeC PRIVATE
+      "$<$<COMPILE_LANGUAGE:C>:${UTF8_BENCH_C_FLAGS_X86_64_AVX512}>"
+      $<$<COMPILE_LANGUAGE:CXX>:-O3>
+    )
+  endif()
 endif()
 
 set(UTF8_BENCH_ONE_TARGETS
@@ -236,5 +262,8 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
     bench_utf8_one_Favx2_Slookup4_EeC
     bench_utf8_one_Favx2_Sutf8d_EeC
   )
+  if(UTF8_BENCH_AVX512)
+    list(APPEND UTF8_BENCH_ONE_TARGETS bench_utf8_one_Favx512_Sscalar_EeC)
+  endif()
 endif()
 add_custom_target(bench_utf8_one_all DEPENDS ${UTF8_BENCH_ONE_TARGETS})

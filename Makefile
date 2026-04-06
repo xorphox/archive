@@ -18,6 +18,7 @@
 #           UTF8_BENCH_FULL_RANGE=OFF — run only 8 B + 8 MiB (runtime filter; binary is identical).
 #             Default ON runs the full 8 B … 8 MiB sweep (12 sizes).
 #           UTF8_BENCH_MONOLITH=ON  — single $(BENCH_BIN); default OFF runs bench_utf8_one_* and merges JSON.
+#           UTF8_BENCH_AVX512=ON   — build AVX-512 targets (needs Zen 4+ / Skylake-X+)
 
 SHELL := /bin/bash
 
@@ -40,6 +41,7 @@ SUMMARIZE_FLAGS ?=
 UTF8_BENCH_FULL_RANGE ?= ON
 # Monolithic bench_utf8 (CMake default OFF). This Makefile defaults OFF: build bench_utf8_one_all only.
 UTF8_BENCH_MONOLITH ?= OFF
+UTF8_BENCH_AVX512 ?= OFF
 
 # Runtime size filter (appended to BENCH_FLAGS when FULL_RANGE=OFF).
 ifneq ($(UTF8_BENCH_FULL_RANGE),ON)
@@ -66,6 +68,7 @@ bench-build:
 		{ echo "==== $$(date -Iseconds) bench-build: configure ===="; \
 		  $(CMAKE) -S $(UTF8_BENCH_DIR) -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 			-DUTF8_BENCH_MONOLITH=$(UTF8_BENCH_MONOLITH) \
+			-DUTF8_BENCH_AVX512=$(UTF8_BENCH_AVX512) \
 			-DUTF8_BUILD_TESTS=$(UTF8_BUILD_TESTS); \
 		  ln -sf build/compile_commands.json $(UTF8_BENCH_DIR)/compile_commands.json; \
 		  echo "==== bench-build: cmake --build --verbose ===="; \
