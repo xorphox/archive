@@ -147,6 +147,66 @@ allocation across the fast-to-slow transition even with the noinline bulk call.
 Current result: `scalar_EeCA` is +1.7% faster than `scalar_EeC` on
 `mostly_ascii/8MiB` -- the weakness is gone.
 
+## lookup4v: SIMD vectorised lookup4 validator (SIMDe / SSSE3+SSE4.1)
+
+`utf8_slow_lookup4v.h` — direct SIMD translation of Lemire's lookup4 algorithm.
+Three 16-byte nibble lookup tables mapped to `pshufb`, cross-chunk byte shifts
+via `palignr`, saturating subtract for continuation checks, `ptest` for
+zero-test. Uses SIMDe so the same source compiles to native SSSE3 on x86 and
+NEON `tbl`/`ext` on ARMv8.
+
+### Speedups vs scalar_EeCA baseline (8 MiB, cpu_time)
+
+**Slookup4v (standalone, no ASCII prefix):**
+
+| Profile | Baseline (ns) | lookup4v (ns) | Speedup |
+|---------|---------------|---------------|---------|
+| ascii_random | 233.0k | 104.6k | 2.2x |
+| half_ascii_first | 1.57M | 53.4k | 29.3x |
+| utf8_typical | 11.44M | 439.5k | 26.0x (note: pre-fix data bogus, actual ~26x) |
+| mostly_ascii | 5.59M | 464.5k | 12.0x |
+
+**Favx2_Slookup4v_EeC (AVX2 ASCII prefix + lookup4v validator):**
+
+| Profile | Baseline (ns) | Favx2+lookup4v (ns) | Speedup |
+|---------|---------------|---------------------|---------|
+| ascii_random | 233.0k | 114.1k | 2.0x |
+| half_ascii_first | 1.57M | 53.6k | 29.1x |
+| mostly_ascii | 5.59M | 471.6k | 11.8x |
+
+The standalone `Slookup4v` is fastest in every profile — even for pure ASCII,
+the SIMD validator's `movemask == 0` fast path (4 loads + 1 OR + 1 movemask
+per 64 bytes) beats the scalar 8-byte-at-a-time loop by 2.2x. For multibyte-
+heavy data (`utf8_typical`, `half_ascii_first`), the 3-pshufb parallel
+validation gives 26–29x over the scalar byte-at-a-time DFA.
+
+Pairing with AVX2 prefix (`Favx2_Slookup4v_EeC`) adds no benefit over
+standalone `Slookup4v` — the SIMD validator's own ASCII fast path is already
+faster than the AVX2 prefix scan for this workload.
+
+### Bug found and fixed: `prev_inc` across 64-byte block boundaries
+
+Initial implementation OR'd `prev_incomplete` into the error vector on every
+non-ASCII block. This is wrong: when a multibyte sequence straddles a 64-byte
+boundary, `palignr` already carries the lead byte into the next block's
+byte-level check. The `prev_incomplete` flag should only be checked when:
+
+1. The next block is **all ASCII** (incomplete + ASCII = real error)
+2. At **EOF** (incomplete at end of input = real error)
+
+Verified against [Lemire's reference](https://github.com/lemire/validateutf8-experiments/blob/master/src/generic/utf8_lookup4_algorithm.h)
+— the reference's `check_next_input` only does `error |= prev_incomplete` in
+the ASCII fast path, never in the non-ASCII path. Regression test added:
+`MultibyteAcross64ByteBlocks` (3-byte and 4-byte chars at every size up to
+384 bytes).
+
+### Benchmark harness fix: pre-flight validation
+
+Added a pre-flight `fn(buf)` call before the timed loop in `RunBench`. If the
+validator returns `false` on data that should be valid, the benchmark calls
+`state.SkipWithError(...)` instead of silently producing bogus flat-line
+numbers.
+
 ## Open threads
 
 - [ ] Pin frequency / longer `min_time` / repetitions when publishing numbers.

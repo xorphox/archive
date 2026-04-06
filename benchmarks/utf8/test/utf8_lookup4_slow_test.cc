@@ -1,5 +1,6 @@
 // Parity vs utf8_slow_scalar:
 //   - utf8_slow_lookup4 (Lemire lookup4 scalar)
+//   - utf8_slow_lookup4v (Lemire lookup4 SIMD via SIMDe)
 //   - utf8_slow_utf8d (Höhrmann utf8d scalar)
 #include <gtest/gtest.h>
 
@@ -9,6 +10,7 @@
 #include <vector>
 
 #include "utf8_slow_lookup4.h"
+#include "utf8_slow_lookup4v.h"
 #include "utf8_slow_scalar.h"
 #include "utf8_slow_utf8d.h"
 
@@ -25,6 +27,13 @@ bool
 Lookup4(std::string_view s)
 {
 	return utf8_slow_lookup4(
+		reinterpret_cast<const uint8_t*>(s.data()), s.size());
+}
+
+bool
+Lookup4v(std::string_view s)
+{
+	return utf8_slow_lookup4v(
 		reinterpret_cast<const uint8_t*>(s.data()), s.size());
 }
 
@@ -48,6 +57,12 @@ void
 ExpectLookup4Agree(std::string_view bytes, const char* note)
 {
 	ExpectVsScalar(bytes, note, Lookup4, "lookup4");
+}
+
+void
+ExpectLookup4vAgree(std::string_view bytes, const char* note)
+{
+	ExpectVsScalar(bytes, note, Lookup4v, "lookup4v");
 }
 
 void
@@ -164,6 +179,115 @@ TEST(Utf8Lookup4VsScalar, ExhaustiveSupplementaryPlane)
 	for (uint32_t cp = 0x10000u; cp <= 0x10FFFFu; cp++) {
 		const std::string s = U8(cp);
 		ExpectLookup4Agree(s, ("U+" + std::to_string(cp)).c_str());
+	}
+}
+
+TEST(Utf8Lookup4vVsScalar, Empty)
+{
+	ExpectLookup4vAgree("", "empty");
+}
+
+TEST(Utf8Lookup4vVsScalar, Ascii)
+{
+	ExpectLookup4vAgree("hello", "ascii");
+	ExpectLookup4vAgree(std::string(256, 'A'), "long ascii");
+}
+
+TEST(Utf8Lookup4vVsScalar, ValidBoundaries)
+{
+	const std::vector<uint32_t> cps = {
+		0x24,
+		0x7F,
+		0x80,
+		0x7FF,
+		0x800,
+		0xFFF,
+		0x1000,
+		0xD7FF,
+		0xE000,
+		0xFFFF,
+		0x10000,
+		0x10FFFF,
+	};
+	for (uint32_t cp : cps) {
+		const std::string s = U8(cp);
+		ExpectLookup4vAgree(s, ("valid U+" + std::to_string(cp)).c_str());
+	}
+}
+
+TEST(Utf8Lookup4vVsScalar, ValidConcatenated)
+{
+	std::string s;
+	for (uint32_t cp : { 0x41u, 0x80u, 0x800u, 0x10000u, 0x10FFFFu }) {
+		s += U8(cp);
+	}
+	ExpectLookup4vAgree(s, "concat valid sequences");
+}
+
+TEST(Utf8Lookup4vVsScalar, InvalidSamples)
+{
+	const std::vector<std::pair<std::string, const char*>> bad = {
+		{ "\x80", "lone continuation" },
+		{ "\xBF", "lone continuation" },
+		{ "\xC0\xAF", "overlong 2-byte" },
+		{ "\xE0\x80\xAF", "overlong 3-byte" },
+		{ "\xF0\x80\x80\xAF", "overlong 4-byte" },
+		{ "\xE0\xA0", "truncated 3-byte" },
+		{ "\xF0\x90\x80", "truncated 4-byte" },
+		{ "\xC2\x00", "bad continuation" },
+		{ "\xED\xA0\x80", "surrogate U+D800" },
+		{ "\xED\xBF\xBF", "surrogate U+DFFF" },
+		{ "\xF4\x90\x80\x80", "codepoint > U+10FFFF" },
+		{ "\xF5\x80\x80\x80", "lead F5" },
+		{ "\xFF", "invalid lead" },
+		{ "\xFE", "invalid lead" },
+	};
+	for (const auto& [b, note] : bad) {
+		ExpectLookup4vAgree(b, note);
+	}
+}
+
+TEST(Utf8Lookup4vVsScalar, MultibyteAcross64ByteBlocks)
+{
+	// 3-byte chars (U+4E16 = E4 B8 96) spanning 64-byte block boundaries.
+	// 66 bytes = one 64-byte main-loop block + 2-byte tail; the last 3-byte
+	// char straddles the boundary (lead at byte 63, continuations at 64–65).
+	for (size_t n = 3; n <= 384; n += 3) {
+		std::string s;
+		s.reserve(n);
+		for (size_t j = 0; j + 2 < n; j += 3) {
+			s += "\xE4\xB8\x96";
+		}
+		ExpectLookup4vAgree(s, ("3-byte x " + std::to_string(n / 3)).c_str());
+	}
+
+	// 4-byte chars (U+1F600 = F0 9F 98 80) — straddle at different offsets.
+	for (size_t n = 4; n <= 384; n += 4) {
+		std::string s;
+		s.reserve(n);
+		for (size_t j = 0; j + 3 < n; j += 4) {
+			s += "\xF0\x9F\x98\x80";
+		}
+		ExpectLookup4vAgree(s, ("4-byte x " + std::to_string(n / 4)).c_str());
+	}
+}
+
+TEST(Utf8Lookup4vVsScalar, ExhaustiveBmpNonSurrogates)
+{
+	for (uint32_t cp = 0; cp <= 0xFFFFu; cp++) {
+		if (cp >= 0xD800u && cp <= 0xDFFFu) {
+			continue;
+		}
+		const std::string s = U8(cp);
+		ExpectLookup4vAgree(s, ("U+" + std::to_string(cp)).c_str());
+	}
+}
+
+TEST(Utf8Lookup4vVsScalar, ExhaustiveSupplementaryPlane)
+{
+	for (uint32_t cp = 0x10000u; cp <= 0x10FFFFu; cp++) {
+		const std::string s = U8(cp);
+		ExpectLookup4vAgree(s, ("U+" + std::to_string(cp)).c_str());
 	}
 }
 

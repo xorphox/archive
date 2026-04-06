@@ -17,6 +17,10 @@ as_str_is_valid_utf8(const uint8_t *buf, size_t buf_sz)
 		return buf_sz == 0;
 	}
 
+#if defined(__x86_64__) || defined(__i386__)
+	__asm__ volatile (".fill 17, 1, 0x90" ::: "memory"); // push loop past 32-byte DSB boundary
+#endif
+
 	const size_t k = utf8_fast_scalar(buf, buf_sz);
 
 	if (k == buf_sz) {

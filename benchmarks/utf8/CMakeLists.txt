@@ -24,6 +24,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googlebenchmark)
 
+# SIMDe: #include <simde/x86/sse2.h> (headers live under submodules/simde/simde/)
+set(ARCHIVE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../..")
+set(SIMDE_INCLUDE_DIR "${ARCHIVE_ROOT}/submodules/simde")
+
 option(UTF8_BUILD_TESTS "Build GTest: utf8_slow_lookup4 vs utf8_slow_scalar" ON)
 
 if(UTF8_BUILD_TESTS)
@@ -37,9 +41,15 @@ if(UTF8_BUILD_TESTS)
   enable_testing()
 
   add_executable(utf8_lookup4_slow_test test/utf8_lookup4_slow_test.cc)
-  target_include_directories(utf8_lookup4_slow_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+  target_include_directories(utf8_lookup4_slow_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${SIMDE_INCLUDE_DIR}"
+  )
   target_link_libraries(utf8_lookup4_slow_test PRIVATE GTest::gtest_main)
   target_compile_options(utf8_lookup4_slow_test PRIVATE -Wall)
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+    target_compile_options(utf8_lookup4_slow_test PRIVATE -march=x86-64-v2)
+  endif()
 
   include(GoogleTest)
   # ctest is not a TTY; without this GTest disables ANSI colors (auto mode).
@@ -48,10 +58,6 @@ if(UTF8_BUILD_TESTS)
       ENVIRONMENT "GTEST_COLOR=yes"
   )
 endif()
-
-# SIMDe: #include <simde/x86/sse2.h> (headers live under submodules/simde/simde/)
-set(ARCHIVE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../..")
-set(SIMDE_INCLUDE_DIR "${ARCHIVE_ROOT}/submodules/simde")
 
 # =============================================================================
 # C compiler flags — what goes where
@@ -195,8 +201,8 @@ function(utf8_bench_add_one exe cpp shim use_haswell)
   )
 endfunction()
 
-utf8_bench_add_one(bench_utf8_one_scalar_EeC
-  bench_utf8_one_scalar_EeC.cpp shim/shim_scalar_EeC.c OFF)
+#utf8_bench_add_one(bench_utf8_one_scalar_EeC
+#  bench_utf8_one_scalar_EeC.cpp shim/shim_scalar_EeC.c OFF)
 
 # "A" (aligned) variants: utf8_fast_scalar compiled as noinline+hot in its own
 # .text.hot section with -falign-functions=64 — keeps the tight 64-bit ASCII
@@ -224,14 +230,32 @@ utf8_bench_add_one(bench_utf8_one_Sscalar
   bench_utf8_one_Sscalar.cpp shim/shim_Sscalar.c OFF)
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
-  utf8_bench_add_one(bench_utf8_one_Fsse41_Sscalar_EeC
-    bench_utf8_one_Fsse41_Sscalar_EeC.cpp shim/shim_Fsse41_Sscalar_EeC.c ON)
+  #utf8_bench_add_one(bench_utf8_one_Fsse41_Sscalar_EeC
+  #  bench_utf8_one_Fsse41_Sscalar_EeC.cpp shim/shim_Fsse41_Sscalar_EeC.c ON)
   utf8_bench_add_one(bench_utf8_one_Favx2_Sscalar_EeC
     bench_utf8_one_Favx2_Sscalar_EeC.cpp shim/shim_Favx2_Sscalar_EeC.c ON)
   utf8_bench_add_one(bench_utf8_one_Favx2_Slookup4_EeC
     bench_utf8_one_Favx2_Slookup4_EeC.cpp shim/shim_Favx2_Slookup4_EeC.c ON)
   utf8_bench_add_one(bench_utf8_one_Favx2_Sutf8d_EeC
     bench_utf8_one_Favx2_Sutf8d_EeC.cpp shim/shim_Favx2_Sutf8d_EeC.c ON)
+  utf8_bench_add_one(bench_utf8_one_Slookup4v
+    bench_utf8_one_Slookup4v.cpp shim/shim_Slookup4v.c ON)
+  utf8_bench_add_one(bench_utf8_one_Favx2_Slookup4v_EeC
+    bench_utf8_one_Favx2_Slookup4v_EeC.cpp shim/shim_Favx2_Slookup4v_EeC.c ON)
+
+  add_executable(bench_utf8_one_Fscalar_Slookup4v_EeCA
+    bench_utf8_one_Fscalar_Slookup4v_EeCA.cpp
+    shim/shim_Fscalar_Slookup4v_EeCA.c
+    utf8_fast_aligned.c)
+  target_include_directories(bench_utf8_one_Fscalar_Slookup4v_EeCA PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${SIMDE_INCLUDE_DIR}"
+  )
+  target_link_libraries(bench_utf8_one_Fscalar_Slookup4v_EeCA PRIVATE benchmark::benchmark)
+  target_compile_options(bench_utf8_one_Fscalar_Slookup4v_EeCA PRIVATE
+    "$<$<COMPILE_LANGUAGE:C>:${UTF8_BENCH_C_FLAGS_X86_64_HASWELL}>"
+    $<$<COMPILE_LANGUAGE:CXX>:-O3>
+  )
 
   if(UTF8_BENCH_AVX512)
     add_executable(bench_utf8_one_Favx512_Sscalar_EeC
@@ -249,7 +273,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
 endif()
 
 set(UTF8_BENCH_ONE_TARGETS
-  bench_utf8_one_scalar_EeC
+  #bench_utf8_one_scalar_EeC
   bench_utf8_one_scalar_EeCA
   bench_utf8_one_Fsse2_Sscalar_EeC
   bench_utf8_one_Fscalar_Sutf8d_EeCA
@@ -257,10 +281,13 @@ set(UTF8_BENCH_ONE_TARGETS
 )
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
   list(APPEND UTF8_BENCH_ONE_TARGETS
-    bench_utf8_one_Fsse41_Sscalar_EeC
+    #bench_utf8_one_Fsse41_Sscalar_EeC
     bench_utf8_one_Favx2_Sscalar_EeC
     bench_utf8_one_Favx2_Slookup4_EeC
     bench_utf8_one_Favx2_Sutf8d_EeC
+    bench_utf8_one_Fscalar_Slookup4v_EeCA
+    bench_utf8_one_Slookup4v
+    bench_utf8_one_Favx2_Slookup4v_EeC
   )
   if(UTF8_BENCH_AVX512)
     list(APPEND UTF8_BENCH_ONE_TARGETS bench_utf8_one_Favx512_Sscalar_EeC)

@@ -164,6 +164,11 @@ RunBench(benchmark::State& state, ValidateFn fn, FillFn fill)
 	std::vector<uint8_t> buf(n);
 	fill(buf, rng);
 
+	if (! fn(buf.data(), buf.size())) {
+		state.SkipWithError("validator returned false on valid UTF-8 input");
+		return;
+	}
+
 	for (auto _ : state) {
 		bool ok = fn(buf.data(), buf.size());
 		benchmark::DoNotOptimize(&ok);
