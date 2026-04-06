@@ -83,14 +83,14 @@ GCC 13 at `-O3` ignores all attempts to align this particular loop:
 `utf8_fast_aligned.c` splits the 64-bit bulk loop out of `utf8_fast_scalar`
 into a standalone function (`utf8_fast_bulk`) with
 `__attribute__((noinline, hot))`. The head-peel and tail remain in the header
-(`utf8_fast_scalar.h` with `#ifdef UTF8_FAST_SCALAR_USE_ALIGNED`). The bulk
-function uses three mechanisms:
+(`utf8_fast_scalar.h` with `#ifdef UTF8_FAST_SCALAR_USE_ALIGNED`). Two
+mechanisms make the alignment robust:
 
-1. **`__attribute__((hot))`** -- places it in `.text.hot`, decoupled from the
-   C++ harness code.
-2. **`#pragma GCC optimize("align-functions=64")`** -- function starts at a
-   64-byte boundary.
-3. **`asm volatile(".p2align 5")`** inside the function, right before the loop
+1. **`__attribute__((noinline, hot))`** -- `noinline` prevents the loop from
+   being folded into the caller; `hot` places it in `.text.hot`, a separate
+   linker section decoupled from surrounding code. The `.text.hot` section
+   gets 64-byte alignment from GCC automatically -- no `#pragma` needed.
+2. **`asm volatile(".p2align 5")`** inside the function, right before the loop
    -- GCC inserts NOP padding to a 32-byte boundary. The loop always starts at
    offset 14 within a 32-byte DSB window (14 + 17 = 31 <= 32).
 
@@ -100,6 +100,29 @@ at all.
 
 Trade-off: one extra function call into `utf8_fast_bulk` per validation --
 negligible at 8 MiB.
+
+### What doesn't work: `.p2align` in an inlined function
+
+Attempted putting `asm volatile(".p2align 5")` directly in `utf8_fast_scalar.h`
+(the inlined path) instead of using the separate `utf8_fast_bulk` function.
+This **failed**: when `utf8_fast_scalar` is inlined into a large caller
+(~0xb0 bytes of prologue + head-peel), GCC places the NOP padding at the asm
+location but then lays out the mask load (10 bytes) and loop setup after it.
+The loop ends up at an unpredictable offset past the alignment point, defeating
+the purpose.
+
+The `.p2align` only works reliably in `utf8_fast_bulk` because the function is
+tiny (~18 bytes of prologue). There's almost no code for GCC to rearrange
+between the padding and the loop, so the loop lands at a predictable position.
+
+### `#pragma GCC optimize("align-functions=64")` is unnecessary
+
+Initially used `#pragma GCC optimize("align-functions=64")` on
+`utf8_fast_aligned.c` to force 64-byte function alignment. Discovered this is
+redundant: `__attribute__((hot))` already places the function in `.text.hot`,
+and GCC sets the section alignment to 64 bytes automatically. The `.p2align 5`
+inside the function pads to the next 32-byte boundary regardless of function
+alignment, so the pragma was belt-and-suspenders. Removed it.
 
 ### Build-level mitigation
 

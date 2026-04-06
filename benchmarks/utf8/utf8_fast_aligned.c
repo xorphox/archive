@@ -11,13 +11,8 @@
 // Compare bench_utf8_one_scalar_EeCA vs bench_utf8_one_scalar_EeC
 // to measure the DSB alignment effect without changing the algorithm.
 
-#if defined(__x86_64__) || defined(__i386__)
-
 #include <stddef.h>
 #include <stdint.h>
-
-#pragma GCC push_options
-#pragma GCC optimize("align-functions=64")
 
 // Scan aligned 64-bit words for any high bit.  Returns the byte offset of the
 // first non-ASCII byte relative to p64, or n64*8 if all words are ASCII.
@@ -30,7 +25,9 @@ utf8_fast_bulk(const uint64_t *p64, size_t n64)
 
 	const uint64_t mask = 0x8080808080808080ULL;
 
+#if defined(__x86_64__) || defined(__i386__)
 	__asm__ volatile (".p2align 5" ::: "memory");
+#endif
 
 	for (size_t i = 0; i < n64; i++) {
 		const uint64_t t = p64[i] & mask;
@@ -47,7 +44,3 @@ utf8_fast_bulk(const uint64_t *p64, size_t n64)
 
 	return n64 * 8;
 }
-
-#pragma GCC pop_options
-
-#endif // x86_64 || i386
