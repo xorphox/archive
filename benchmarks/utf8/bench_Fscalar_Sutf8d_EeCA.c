@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define UTF8_BENCH_USE_ALWAYS_INLINE
 #define UTF8_FAST_SCALAR_USE_ALIGNED
 #include "utf8_fast_scalar.h"
 #include "utf8_slow_utf8d.h"

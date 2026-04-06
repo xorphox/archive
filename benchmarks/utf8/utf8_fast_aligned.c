@@ -28,6 +28,7 @@ utf8_fast_bulk(const uint64_t *p64, size_t n64)
 	const uint64_t mask = 0x8080808080808080ULL;
 
 	__asm__ volatile (".p2align 5" ::: "memory");
+
 	do {
 		const uint64_t t = p64[off / 8] & mask;
 
